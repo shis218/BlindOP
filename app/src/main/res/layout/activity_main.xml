@@ -16,4 +16,12 @@
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <Button
+        android:id="@+id/falar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Falar"
+        tools:layout_editor_absoluteX="41dp"
+        tools:layout_editor_absoluteY="104dp" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

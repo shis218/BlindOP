@@ -6,7 +6,6 @@ import android.content.Context;
 import android.os.Bundle;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -14,15 +13,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
 import android.speech.tts.*;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import retrofit2.*;
 
+
 public class MainActivity extends AppCompatActivity {
+
     File configs;
     //Array de textos
     ArrayList<String> arraydirecoes=new ArrayList();
@@ -69,6 +70,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         TextView centralTxt = (TextView) findViewById(R.id.hwtxt);
+        Button btnFala = (Button) findViewById(R.id.falar);
+
         Context context=getApplicationContext();
 //Inicializa TTS
         dTTS=new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
@@ -79,22 +82,27 @@ public class MainActivity extends AppCompatActivity {
                     //Seta a lingua pra do celular
                     int result = dTTS.setLanguage(Locale.getDefault());
                     if(result == TextToSpeech.LANG_NOT_SUPPORTED || result ==TextToSpeech.LANG_MISSING_DATA)
-                    {
-                        //Caso não possua a linguagem então coloca como ingles
-                        Log.e("TTS", "Idioma não suportado");
-                        dTTS.setLanguage(Locale.ENGLISH);
-                    }
+                        {
+                            //Caso não possua a linguagem então coloca como ingles
+                            Log.e("TTS", "Idioma não suportado");
+                            dTTS.setLanguage(Locale.ENGLISH);
+                        }
                 }
                 else {
                     //Falha no uso do recurso do TTS
                     Log.e("TTS","Inicialização falhou...");
                 }
-               //  dTTS.speak("TTS carregado",dTTS.QUEUE_FLUSH,null, null);
+
 
             }
 
         });
-
+        btnFala.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                //dTTS.speak("TTS funcionando",dTTS.QUEUE_FLUSH,null,null);
+                speak("TTS Funcionando perfeitamente");
+            }
+        });
 
 
         //Tenta ver se o arquivo existe
@@ -116,7 +124,8 @@ public class MainActivity extends AppCompatActivity {
         arraydirecoes.add("Ande X passos para trás");
         arraydirecoes.add("Ande X passos para direita");
         centralTxt.setText(txtchave);
-        //new Retrofit.Builder().baseUrl("http://worldclockapi.com/api/json/utc/now");
+
+
     }
     //Login
     private void salvaChave(String data) {
@@ -168,6 +177,24 @@ public class MainActivity extends AppCompatActivity {
 
         return ret;
     }
+
+       public void BuscaCep(){
+        CEP cep=new CEP();
+
+    Call<CEP> call = new RetrofitConfig().getCEPService().buscarCEP(cep.getText().toString());
+                call.enqueue(new Callback<CEP>() {
+                    @Override
+                    public void onResponse(Call<CEP> call, Response<CEP> response) {
+                        CEP cep = response.body();
+        //                resposta.setText(cep.toString());
+                    }
+
+                    @Override
+                    public void onFailure(Call<CEP> call, Throwable t) {
+
+                    }
+                });
+        }
 
 
     public String nextText(int type,int number){
@@ -223,4 +250,26 @@ public class MainActivity extends AppCompatActivity {
             mapa[coordenadax][coordenaday][coordenadaz]=1;
         }
     }
+
+    public void speak(final String text){ // make text 'final'
+
+        // ... do not declare tts here
+
+        dTTS = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if (status == TextToSpeech.SUCCESS){
+                    int result = dTTS.setLanguage(Locale.getDefault());
+                    if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED){
+                        Log.e("TTS", "Language not supported");
+                    } else {
+                        dTTS.speak(text, TextToSpeech.QUEUE_FLUSH, null,null);
+                    }
+                } else {
+                    Log.e("TTS", "Failed");
+                }
+            }
+        });
+    }
+
 }
