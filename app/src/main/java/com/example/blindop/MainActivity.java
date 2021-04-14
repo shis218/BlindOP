@@ -64,14 +64,18 @@ public class MainActivity extends AppCompatActivity {
 
     //Text to speech
     TextToSpeech dTTS;
+    Button btncep;
+    TextView txtCep;
 
+    TextView centralTxt;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        TextView centralTxt = (TextView) findViewById(R.id.hwtxt);
+        centralTxt = (TextView) findViewById(R.id.hwtxt);
         Button btnFala = (Button) findViewById(R.id.falar);
-
+        btncep = (Button) findViewById(R.id.btnCep);
+        txtCep = (TextView) findViewById(R.id.txtCep);
         Context context=getApplicationContext();
 //Inicializa TTS
         dTTS=new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
@@ -101,6 +105,13 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 //dTTS.speak("TTS funcionando",dTTS.QUEUE_FLUSH,null,null);
                 speak("TTS Funcionando perfeitamente");
+            }
+        });
+
+        btncep.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                //Search for CEP
+                BuscaCep();
             }
         });
 
@@ -179,19 +190,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
        public void BuscaCep(){
-        CEP cep=new CEP();
-
-    Call<CEP> call = new RetrofitConfig().getCEPService().buscarCEP(cep.getText().toString());
+           CEP cep=new CEP();
+           centralTxt.setText("Indo");
+        Call<CEP> call = new RetrofitConfig().getCEPService().buscarCEP();
                 call.enqueue(new Callback<CEP>() {
                     @Override
                     public void onResponse(Call<CEP> call, Response<CEP> response) {
                         CEP cep = response.body();
-        //                resposta.setText(cep.toString());
+                        txtCep.setText(cep.toString());
+                        centralTxt.setText("Resposta");
                     }
 
                     @Override
                     public void onFailure(Call<CEP> call, Throwable t) {
-
+                        centralTxt.setText("Falhou"+t.getMessage());
                     }
                 });
         }
