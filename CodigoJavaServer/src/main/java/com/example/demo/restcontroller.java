@@ -1,4 +1,7 @@
 package com.example.demo;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.jena.*;
@@ -7,6 +10,8 @@ import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryFactory;
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
+import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.impl.LiteralImpl;
 import org.apache.jena.rdfconnection.RDFConnectionFuseki;
 import org.apache.jena.rdfconnection.RDFConnectionRemoteBuilder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,7 +35,37 @@ public class restcontroller {
 			p.setNome(nome);
 			return p;
 		}
+		@GetMapping("/searchLogins")
+		public Object[] searchLogins() {
+			Object[] pt= getChaves();
+
+		    return pt;
+			
+			
+			//return p;
+		}
 		
+		
+		
+		/*PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+prefix owl: <http://www.w3.org/2002/07/owl#>
+
+
+
+INSERT DATA{	
+<https://blindop.herokuapp.com/indoorplaning#Usuario2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://blindop.herokuapp.com/indoorplaning#idp::person>
+};
+
+INSERT DATA{ 
+<https://blindop.herokuapp.com/indoorplaning#Usuario2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> owl:NamedIndividual
+};
+
+
+INSERT DATA{	
+<https://blindop.herokuapp.com/indoorplaning#Usuario2> <https://blindop.herokuapp.com/indoorplaning#idp:key> "29"^^xsd:int
+};		 
+		 */
 		public  String getFeaturesOfInterest() {
 	        return getfuseki() + "SELECT ?uri ?hasProperty ?type WHERE{\n" +
 	                "  ?uri a ?subClass;\n" +
@@ -40,6 +75,46 @@ public class restcontroller {
 	                "  FILTER(?type != owl:NamedIndividual)\n" +
 	                "}";
 	    }
+		
+		public Object[] getChaves() {
+			int count=0;
+			String string="SELECT ?A ?C {?A <https://blindop.herokuapp.com/indoorplaning#idp:key> ?C}";
+			Query query=QueryFactory.create(string);
+			
+			RDFConnectionRemoteBuilder builder = RDFConnectionFuseki.create().destination("https://blindop.herokuapp.com/indoorplaning/sparql");
+			
+			ArrayList<Person> resp = new ArrayList<Person>();
+			try(RDFConnectionFuseki conn = (RDFConnectionFuseki) builder.build()) {
+			QueryExecution qe = conn.query(query);
+			
+			ResultSet rsService = qe.execSelect();
+			
+	        do {
+	            QuerySolution qs = rsService.next();
+	            //org.apache.jena.rdf.model.Resource nome = qs.getResource("A");           
+	            //org.apache.jena.rdf.model.impl.LiteralImpl key= (LiteralImpl) qs.getLiteral("C");
+	        //  org.apache.jena.rdf.model.Resource type = qs.getResource("object");
+	            RDFNode nome = qs.get("A");
+	            RDFNode key = qs.get("C");
+	            //Remove a uri do nome
+	            String nomelimpa=(nome+"").replace("https://blindop.herokuapp.com/indoorplaning#","");
+	            
+	            //Remove o XSD:INT do valor
+	            String keylimpa=(key+"").replace("^^http://www.w3.org/2001/XMLSchema#int","");
+	            Person p=new Person();
+	            count++;
+	            p.setId(count+"");	            
+				p.setKey(keylimpa);
+				p.setNome(nomelimpa);
+				resp.add(p);
+	            
+	            
+	        } while (rsService.hasNext());
+	        
+			}
+			return  (Object[]) resp.toArray();
+		}
+		
 		//Metodo de pegar infos do fuseki
 		public String getfuseki() {
 			StringBuilder resp=new StringBuilder();
