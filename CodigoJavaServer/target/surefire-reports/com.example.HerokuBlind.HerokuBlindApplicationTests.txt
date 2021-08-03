@@ -1,0 +1,7 @@
+-------------------------------------------------------------------------------
+Test set: com.example.HerokuBlind.HerokuBlindApplicationTests
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.392 s <<< FAILURE! - in com.example.HerokuBlind.HerokuBlindApplicationTests
+com.example.HerokuBlind.HerokuBlindApplicationTests  Time elapsed: 0.384 s  <<< ERROR!
+java.lang.IllegalStateException: Found multiple @SpringBootConfiguration annotated classes [Generic bean: class [com.example.HerokuBlind.FusekiblindApplication]; scope=; abstract=false; lazyInit=null; autowireMode=0; dependencyCheck=0; autowireCandidate=true; primary=false; factoryBeanName=null; factoryMethodName=null; initMethodName=null; destroyMethodName=null; defined in file [C:\Users\Henrique\eclipse-workspace\HerokuBlind\target\classes\com\example\HerokuBlind\FusekiblindApplication.class], Generic bean: class [com.example.HerokuBlind.HerokuBlindApplication]; scope=; abstract=false; lazyInit=null; autowireMode=0; dependencyCheck=0; autowireCandidate=true; primary=false; factoryBeanName=null; factoryMethodName=null; initMethodName=null; destroyMethodName=null; defined in file [C:\Users\Henrique\eclipse-workspace\HerokuBlind\target\classes\com\example\HerokuBlind\HerokuBlindApplication.class]]
+

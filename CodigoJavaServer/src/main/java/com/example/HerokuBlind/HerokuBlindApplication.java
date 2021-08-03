@@ -1,13 +1,13 @@
-package com.example.demo;
+package com.example.HerokuBlind;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class FusekiblindApplication {
+public class HerokuBlindApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(FusekiblindApplication.class, args);
+		SpringApplication.run(HerokuBlindApplication.class, args);
 	}
 
 }

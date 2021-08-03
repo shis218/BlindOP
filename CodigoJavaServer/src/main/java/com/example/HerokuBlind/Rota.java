@@ -1,10 +1,17 @@
-package com.example.demo;
+package com.example.HerokuBlind;
 
 public class Rota {
+	private String nome;
+	public String getNome() {
+		return nome;
+	}
+	public void setNome(String nome) {
+		this.nome = nome;
+	}
 	private int numeroSequencia;
 	private String Direcao;
-	private int metros;
-	private int passos;
+	private float metros;
+	private float passos;
 	
 	
 	public int getNumeroSequencia() {
@@ -13,10 +20,10 @@ public class Rota {
 	public String getDirecao() {
 		return Direcao;
 	}
-	public int getMetros() {
+	public float getMetros() {
 		return metros;
 	}
-	public int getPassos() {
+	public float getPassos() {
 		return passos;
 	}
 	public void setNumeroSequencia(int numeroSequencia) {
@@ -25,13 +32,14 @@ public class Rota {
 	public void setDirecao(String direcao) {
 		Direcao = direcao;
 	}
-	public void setMetros(int metros) {
+	public void setMetros(float metros) {
 		this.metros = metros;
 	}
-	public void setPassos(int passos) {
+	public void setPassos(float passos) {
 		this.passos = passos;
 	}
-
+	
+	
 	
 	
 	

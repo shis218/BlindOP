@@ -1,10 +1,10 @@
-package com.example.demo;
+package com.example.HerokuBlind;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class FusekiblindApplicationTests {
+class HerokuBlindApplicationTests {
 
 	@Test
 	void contextLoads() {

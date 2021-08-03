@@ -1,6 +1,8 @@
-package com.example.demo;
+package com.example.HerokuBlind;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -63,6 +65,7 @@ public class restcontroller {
 			
 			//return p;
 		}
+		
 		@GetMapping("/newLogin")
 		public Object[] newLogin() {
 			int rA=(int) ((Math.random() * (1000)));
@@ -87,26 +90,42 @@ public class restcontroller {
 		}
 		
 		@GetMapping("/rota")
-		public Rota[] rota(@RequestParam(value = "lugar", defaultValue = "mapaEach") String mapa,@RequestParam(value = "inicio", defaultValue = "portao1") String init,@RequestParam(value = "fim", defaultValue = "sala211") String end) {
+		public Rota[] rota(@RequestParam(value = "lugar", defaultValue = "mapaEach") String mapa,@RequestParam(value = "inicio", defaultValue = "Entrada") String vertIniName,@RequestParam(value = "fim", defaultValue = "Saida") String vertFimName) throws InterruptedException {
+			String txt=Dijkm(vertIniName,vertFimName);
 			
-			Rota[] rts=new Rota[10];
-			Rota[] rtm=getrota(mapa);
-			for(int i=0;i<10;i++) {
+			System.out.println(txt+"\n\n");
+		//	Rota[] rtm=getrota(mapa);
+			txt=txt.replace("[", "")	;
+			txt=txt.replace("]", "")	;
+			String[] pontos= txt.split(",");
+			//Tamanho é -1 pois na ultima posição já chegou no destino e não precisa andar mais
+			Rota[] rts=new Rota[pontos.length-1];
+			
+			for(int in=0;in<pontos.length-1;in++) {
 				Rota r=new Rota();
-				if(i%2==0) {
-					r.setDirecao("Cima");
-					r.setMetros(2);
-					r.setNumeroSequencia(i);
-					r.setPassos(16);
+				
+
+				String nome1=pontos[in].trim();
+				String nome2=pontos[in+1].trim();
+				r.setNumeroSequencia(in);
+				r.setNome(nome1+" até "+nome2);
+				String[][] rq2=this.genericSearch1("<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST"+nome1+""+nome2+">", "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#weight>", "?A");
+				if(rq2==null) {
+					rq2=this.genericSearch1("<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST"+nome2+""+nome1+">", "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#weight>", "?A");
 				}
-				else {
-					r.setDirecao("Direita");
-					r.setMetros(5);
-					r.setNumeroSequencia(i);
-					r.setPassos(4);
+				rq2[0][0]=CleanXSD(rq2[0][0]);
+				r.setMetros(Float.parseFloat(rq2[0][0]));
+				r.setPassos((int)Float.parseFloat(rq2[0][0])/10);
+				String[][] rq3=this.genericSearch1("<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST"+nome1+""+nome2+">", "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#direct>", "?A");
+				if(rq3==null) {
+					rq3=this.genericSearch1("<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST"+nome2+""+nome1+">", "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#direct>", "?A");
 				}
-				rts[i]=r;
-			}
+				rq3[0][0]=CleanXSD(rq3[0][0]);
+				r.setDirecao(CleanXSD(rq3[0][0]));
+				rts[in]=r;
+				}
+				
+			
 			return rts;
 		}
 		@GetMapping("/mapa")
@@ -121,15 +140,9 @@ public class restcontroller {
 					+ "<html>\r\n"
 					+ "<body>\r\n"
 					+ "\r\n");
-			for(int i=0;i<255;i++) {
-					if(!(strPontosDeInteresse[i][0]==null)) {
-						sb.append(strPontosDeInteresse[i][0]+"<br> \n");
-				//		sb.append(strPontosDeInteresse[i][1]+"<br> \n");
-				//		sb.append(strPontosDeInteresse[i][2]+"<br> \n");
-					}
-				}
-					sb.append("<br><canvas id=\"myCanvas\" width=\"1500\" height=\"1500\"\r\n"
-					+ "style=\"border:1px solid #c3c3c3;\">\r\n"
+			
+					sb.append("<br><canvas id=\"myCanvas\" width=\"800\" height=\"800\"\r\n"
+					+ "style=\"border:1px absolute; top:0; left:0; solid #c3c3c3;\">\r\n"
 					+ "Your browser does not support the canvas element.\r\n"
 					+ "</canvas>\r\n"
 					+ "\r\n"
@@ -143,12 +156,27 @@ public class restcontroller {
 			sb.append("ctx.moveTo("+intmap[0][i][0]+","+ intmap[0][i][1]+");");
 			sb.append("ctx.lineTo("+intmap[0][i][2]+","+ intmap[0][i][3]+");");
 			sb.append("ctx.stroke();");
+			sb.append("ctx.moveTo("+strPontosDeInteresse[i][1]+","+ strPontosDeInteresse[i][2]+");");
+		//	int a=Integer.parseInt(strPontosDeInteresse[i][1])+3;
+			//int b=Integer.parseInt(strPontosDeInteresse[i][2]);
+		//	sb.append("ctx.moveTo("+a+","+ b+");");
+		//	sb.append("ctx.stroke();");
 			}
 			
 			
 			
-					sb.append("</script>\r\n"
-					+ "\r\n"
+					sb.append("</script>\r\n");
+					for(int i=0;i<255;i++) {
+						if(!(strPontosDeInteresse[i][0]==null)) {
+							if(!strPontosDeInteresse[i][0].contains("meio")) {
+							sb.append(strPontosDeInteresse[i][0]+"<br> \n");
+							sb.append("<button style='position: absolute; top:"+strPontosDeInteresse[i][2]+"px; left:"+strPontosDeInteresse[i][1]+"px;' onclick='myFunction()'>"+strPontosDeInteresse[i][0]+"</button>"); 
+					//		sb.append(strPontosDeInteresse[i][1]+"<br> \n");
+					//		sb.append(strPontosDeInteresse[i][2]+"<br> \n");
+							}
+						}
+					}
+					sb.append("\r\n"
 					+ "</body>\r\n"
 					+ "</html>\r\n"
 					+ "\r\n"
@@ -200,31 +228,166 @@ public class restcontroller {
 			return sb.toString();
 		}
 		
+		@GetMapping("/dij")
+		public String Dijk(@RequestParam(value = "inicio", defaultValue = "Entrada") String vertIniName,@RequestParam(value = "fim", defaultValue = "Saida") String vertFimName) throws InterruptedException {
+
+		        String txt=Dijkm(vertIniName,vertFimName);
+		        StringBuilder sb=new StringBuilder();
+		        sb.append("<!DOCTYPE html>\r\n"
+						+ "<html>\r\n"
+						+ "<body>\r\n");
+		        sb.append(txt);        
+		        sb.append("</body>\r\n"
+					+ "</html>\r\n"
+					+ "\r\n"
+					+ "");
+						
+			return sb.toString();
+		}
+		
+		public String Dijkm(String vertIniName,String vertFimName) throws InterruptedException {
+
+			//Source: https://gist.github.com/artlovan/a07f29e16ab725f8077157de7abdf125
+			String[][] strPontosDeInteresse=this.getPontosDeInteresse();
+			
+			Hashtable<String, Vertex> g=new Hashtable<String, Vertex>();
+			String[] nomes=new String[strPontosDeInteresse.length];
+			//Cria todos vertices
+			for(int i=0;i<strPontosDeInteresse.length;i++) {
+				if(strPontosDeInteresse[i][0]==null) {
+					break;
+				}
+				Vertex v= new Vertex(strPontosDeInteresse[i][0]);
+				nomes[i]=strPontosDeInteresse[i][0];
+				System.out.println("\n\n"+strPontosDeInteresse[i][0]);
+				//Adiciona V no indice que tem o nome do ponto de interesse[i]
+				g.put(strPontosDeInteresse[i][0],v);
+			}
+			//Adiciona as conexões entre vertices
+			 for(int i=0;i<nomes.length;i++) {
+			//	 System.out.print("\n"+resp[i][0]+ "   = "+resp[i][1]);
+				// Vertex V=g.get(nomes[i]);
+				 if(nomes[i]==null) {
+					 break;
+				 }
+				 String[][] conectaCom=this.getConexoesPontosDeInteresse(g.get(nomes[i]).getName());
+				 if(conectaCom==null) {
+					 //Caso nao tenha, entao continua pro proximo
+					 continue;
+				 }
+				 else {
+					 for(int j=0;j<conectaCom.length;j++) {
+						 Vertex m=g.get(conectaCom[j][0]);
+						g.get(nomes[i]).addNeighbour(new Edge(Float.parseFloat(conectaCom[j][1]),g.get(nomes[i]),g.get(conectaCom[j][0])));
+					 }
+				 }
+				 
+			 }
+			 Dijkstra dijkstra = new Dijkstra();
+			 dijkstra.computePath(g.get(vertIniName));
+		
+		        String txt=dijkstra.getShortestPathTo(g.get(vertFimName)).toString();
+		        StringBuilder sb=new StringBuilder();
+
+		        sb.append(txt);        
+		       
+						
+			return sb.toString();
+		}
+		
+		
+		@GetMapping("/dijExemplo")
+		public String dijExemplo() {
+			
+			//Source: https://gist.github.com/artlovan/a07f29e16ab725f8077157de7abdf125
+			
+			  Vertex v1 = new Vertex("A");
+		        Vertex v2 = new Vertex("B");
+		        Vertex v3 = new Vertex("C");
+
+		        v1.addNeighbour(new Edge(1, v1, v2));
+		        v1.addNeighbour(new Edge(10, v1, v2));
+
+		        v2.addNeighbour(new Edge(1, v2, v3));
+
+		        Dijkstra dijkstra = new Dijkstra();
+		        dijkstra.computePath(v1);
+
+		        String txt=dijkstra.getShortestPathTo(v2).toString();
+		        StringBuilder sb=new StringBuilder();
+		        sb.append("<!DOCTYPE html>\r\n"
+						+ "<html>\r\n"
+						+ "<body>\r\n");
+		        sb.append(txt);        
+		        sb.append("</body>\r\n"
+					+ "</html>\r\n"
+					+ "\r\n"
+					+ "");
+						
+			return sb.toString();
+		}
+		@GetMapping("/String")
+		public String Vertices() throws InterruptedException {
+			StringBuilder sb=new StringBuilder();
+			sb.append(" "
+						+ "<html>\r\n"
+						+ "<body>\r\n");
+		        sb.append(this.getConexoesPontosDeInteresse("Entrada")[0][0]);
+		        sb.append(this.getConexoesPontosDeInteresse("Entrada")[0][1]);  
+		        sb.append("</body>\r\n"
+					+ "</html>\r\n"
+					+ "\r\n"
+					+ "");
+						
+			return sb.toString();
+		}
 		
 		@GetMapping("/EntopeMapa")
-		public String EntopeMapa(@RequestParam(value = "lugar", defaultValue = "mapaEach") String nomemapa,@RequestParam(value = "nomeParede", defaultValue = "Parede0") String nomeParede,  @RequestParam(value = "posXini", defaultValue = "0") String posXini,  @RequestParam(value = "posXfim", defaultValue = "0") String posXfim,  @RequestParam(value = "posYini", defaultValue = "0") String posYini,  @RequestParam(value = "posYfim", defaultValue = "0") String posYfim) {
-			StringBuilder sb=new StringBuilder();
-			//int[][][] intmap=getMapa(nomemapa);		
-			
-			//Insere coordenadas
-			String string="PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n prefix owl: <http://www.w3.org/2002/07/owl#> \n"
-					+ "INSERT DATA{	\r\n"
-	                + "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#"+nomeParede+"> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:coordenadaXInicio> "+posXini+"; \r\n"
-	                +"<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:coordenadaXFim> "+posXfim+";"
-	                +"<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:coordenadaYinicio> "+posYini+";"
-	                +"<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:coordenadaYFim> "+posYfim+"."	
-	                + "};";
-			this.InsertGenerico(string);
-			//Insere referencia no mapa 
-			String string2="PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n prefix owl: <http://www.w3.org/2002/07/owl#> \n"
-					+ "INSERT DATA{	\r\n"
-	                + "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#"+nomemapa+"> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#uri> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#"+nomeParede+">. \r\n"
-	                + "};";
-			
-			this.InsertGenerico(string2);
-			
-			
-			return sb.toString();
+		public void EntopeMapa() {
+			String nomeParede="Parede";
+			String nomemapa="mapaEach";
+			//String posXfim="2";
+			//String posYfim="2";
+			//String posXini="2";
+			//String posYini="2";
+			int startParede=10;
+			String[] posXini={"10","60","90","140","190","240","10","10","90","140","90","90","190"};
+			String[] posXfim={"10","60","90","140","190","240","240","240","90","140","140","140","240"};
+			String[] posYini={"10","10","10","10","10","10","10","450","280","280","280","250","250"};
+			String[] posYfim={"450","450","250","250","250","450","10","450","450","450","280","250","250"};
+			for(int i=0;i<posXini.length;i++) {
+				String numParede=(startParede+i)+"";
+				//Deleta coordenada antiga
+				String del="DELETE WHERE {"
+						 + "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#"+nomeParede+""+numParede+"> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:coordenadaXInicio> ?A; \r\n"
+						 +"<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:coordenadaXFim> ?B;\r\n"
+		                +"<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:coordenadaYinicio> ?C;\r\n"
+		                +"<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:coordenadaYFim> ?D.\r\n"	
+						+"}";
+				this.InsertGenerico(del);
+				
+				//Insere coordenadas
+				
+				
+				String string="PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n prefix owl: <http://www.w3.org/2002/07/owl#> \n"
+						+ "INSERT DATA{	\r\n"
+		                + "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#"+nomeParede+""+numParede+"> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:coordenadaXInicio> "+posXini[i]+"; \r\n"
+		                +"<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:coordenadaXFim> "+posXfim[i]+";\r\n"
+		                +"<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:coordenadaYinicio> "+posYini[i]+";\r\n"
+		                +"<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:coordenadaYFim> "+posYfim[i]+".\r\n"	
+		                + "};";
+				System.out.print("\n"+string);
+				this.InsertGenerico(string);
+				//Insere referencia no mapa 
+				String string2="PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n prefix owl: <http://www.w3.org/2002/07/owl#> \n"
+						+ "INSERT DATA{	\r\n"
+		                + "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#"+nomemapa+"> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#uri> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#"+nomeParede+""+numParede+">. \r\n"
+		                + "};";
+				
+				this.InsertGenerico(string2);
+				
+				
+			}	
 		}
 		
 		
@@ -243,7 +406,7 @@ public class restcontroller {
 					+ "<input name='nomeInteresse' id='nomeInteresse' value='"+nomeInteresse+"'><br>"
 					+ "<input name='posXini' id='posXini' value='"+posXini+"'><br>"
 					+ "<input name='posYini' id='posYini' value='"+posYini+"'><br>"					
-					+ "<button>Cria conexão</button><br>"
+					+ "<button>Cria ponto de interesse</button><br>"
 					+ "</form>"
 					+ "</body>\r\n"
 					+ "</html>\r\n"
@@ -283,7 +446,7 @@ public class restcontroller {
 					+ "<input name='nomeConecta' id='nomeConecta' value='"+nomeConecta+"'><br>"
 					+ "direcao: <input name='direcao' id='direcao' value='"+direcao+"'><br>"					
 					+ "distancia: <input name='distancia' id='distancia' value='"+distancia+"'><br>"	
-					+ "<button>Cria interesse</button><br>"
+					+ "<button>Cria conexao</button><br>"
 					+ "</form>"
 					+ "</body>\r\n"
 					+ "</html>\r\n"
@@ -295,6 +458,7 @@ public class restcontroller {
 					+ "INSERT DATA{	\r\n"
 	                + "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST"+nomeInteresse+""+nomeConecta+"> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#indoorgml:RouteNodeType> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#rdn"+nomeInteresse+">; \r\n"
 	                + "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#indoorgml:RouteNodeType> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#rdn"+nomeConecta+">;"
+	                + "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#direct> \""+direcao+"\";"
 	                + "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#weight> \""+distancia+"\"^^xsd:double."
 	                + "};";
 			
@@ -437,6 +601,74 @@ public class restcontroller {
 				System.out.println("Prox Exec");
 				return resp;
 			}
+		
+	
+
+		
+		private String UriToURL(String uri) {
+			StringBuilder sb=new StringBuilder();
+            
+            
+//            System.out.println("\n BareURL "+uri+"\n" );
+            //Remove a uri do nome
+            uri=(uri+"").replace("^^http://www.w3.org/2001/XMLSchema#anyURI","");
+            uri=(uri+"").replace("eger","");
+            sb.append("<");
+            sb.append(uri);
+            sb.append(">"); //Adiciona abre e fecha
+           // System.out.println("\n Transformed URL "+sb.toString()+"\n" );
+			return sb.toString();
+		}
+		
+		
+		private String CleanRST(String uri, String nomeConecta) {
+			StringBuilder sb=new StringBuilder();
+			//"<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST"+nomeInteresse+""+nomeConecta+">
+            
+            System.out.println("\n BareURL "+uri+"\n" );
+            //Remove a uri do nome
+            uri=(uri+"").replace("<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST","");
+            uri=(uri+"").replace(">","");
+            uri=(uri+"").replace(nomeConecta,"");
+            
+            System.out.println("\n Transformed URL "+uri+"\n" );
+			return uri;
+		}
+		private String CleanXSD(String value) {
+			//"<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST"+nomeInteresse+""+nomeConecta+">
+            
+			String keylimpa=(value+"").replace("^^http://www.w3.org/2001/XMLSchema#int","");
+            keylimpa=(keylimpa+"").replace("^^http://www.w3.org/2001/XMLSchema#String","");
+            keylimpa=(keylimpa+"").replace("^^http://www.w3.org/2001/XMLSchema#double","");
+        	keylimpa=(keylimpa+"").replace("eger","");
+        	keylimpa=(keylimpa+"").replace("e0","");
+            return keylimpa;
+		}
+		
+		private String[][] getConexoesPontosDeInteresse(String nomeInteresse) throws InterruptedException {
+						
+				String[][] resultsQuery=this.genericSearch2("?A", "?B", "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#rdn"+nomeInteresse+">");
+				if(resultsQuery==null) {
+					return null;
+				}
+				String[][] resp=new String[resultsQuery.length][3]; //String array[index] 0-: NomeConectado 1-:Distancia
+				//Pega todas strings RDN e busca novamente pelo peso
+				for(int in=0;in<resultsQuery.length;in++) {
+				resp[in][0]=CleanRST(resultsQuery[in][0],nomeInteresse);
+				resp[in][0]=resp[in][0].replace("http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST", "");
+				//System.out.println(resultsQuery[in][0]);
+				String[][] rq2=this.genericSearch1(UriToURL(resultsQuery[in][0]), "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#weight>", "?A");
+				resp[in][1]=CleanXSD(rq2[0][0]);
+				String[][] rq3=this.genericSearch1(UriToURL(resultsQuery[in][0]), "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#direct>", "?A");
+				resp[in][2]=CleanXSD(rq3[0][0]);
+				}
+				/*for(int i=0;i<resp.length;i++) {
+					System.out.print("\n"+resp[i][0]+ "   = "+resp[i][1]);
+				}*/
+				return resp;
+			}
+
+		
 		
 		private void InsereNum(int rA)
 		{
@@ -657,41 +889,99 @@ INSERT DATA{
 			
 			return resp;
 		}
-		
-		public String[] genericSearch(String one,String two, String three) {
+		public String[][] genericSearch1(String one,String two, String three) {
+			
+			//Volta apenas o A em [0]
 			int count=0;
-			String string="SELECT ?A ?B ?C { "+one+" "+two+" "+ three+" }";
+			String string="SELECT DISTINCT ?A {"+one+" "+two+" "+ three+";}";
 			//String string="SELECT ?A ?C {?A <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:key> ?C}";
+			System.out.print("\n\nGeneric Search tp is:"+string);
 			Query query=QueryFactory.create(string);
 			
+			
+			 
 			RDFConnectionRemoteBuilder builder = RDFConnectionFuseki.create().destination("http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning/sparql");
 			
 			ArrayList<String[]> resp = new ArrayList<String[]>();
+			ResultSet rsService;
 			try(RDFConnectionFuseki conn = (RDFConnectionFuseki) builder.build()) {
+				try {
 			QueryExecution qe = conn.query(query);
+			qe.setTimeout(400);
+			rsService = qe.execSelect();
+			if(!rsService.hasNext()) {
+				return null;
+			}
+			}
+			catch(Exception ex) {
+				System.out.print(ex.getMessage());
+				return null;
+			}
 			
-			ResultSet rsService = qe.execSelect();
 			
 	        do {
-	            QuerySolution qs = rsService.next();
-	            //org.apache.jena.rdf.model.Resource nome = qs.getResource("A");           
-	            //org.apache.jena.rdf.model.impl.LiteralImpl key= (LiteralImpl) qs.getLiteral("C");
-	        //  org.apache.jena.rdf.model.Resource type = qs.getResource("object");
+	            QuerySolution qs = rsService.next();     
 	            RDFNode respA = qs.get("A");
-	            RDFNode respB = qs.get("B");
-	            RDFNode respC = qs.get("C");
 	            String[] V= new String[3];
 	            V[0]=respA+"";
-	            V[1]=respB+"";
-	            V[2]=respC+"";
 	            count++;
 				resp.add(V);
 	            
 	            
 	        } while (rsService.hasNext());
-	        
+	        conn.close();
 			}
-			return  (String[]) resp.toArray();
+			String[][] moldResp=new String[count][3];
+			//Coloca os resultados em um vetor
+			for(int i=0;i<moldResp.length;i++) {
+			moldResp[i]=resp.get(i);
+			}
+			
+			return moldResp;
+			
+		}
+		public String[][] genericSearch2(String one,String two, String three) {
+			int count=0;
+			//Volta apenas o A e B em [0] e [1]
+			String string="SELECT DISTINCT ?A ?B {"+one+" "+two+" "+ three+";}";
+			//String string="SELECT ?A ?C {?A <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:key> ?C}";
+			Query query=QueryFactory.create(string);
+			System.out.print("\n\nGeneric Search tp is:"+string);
+			
+			 
+			RDFConnectionRemoteBuilder builder = RDFConnectionFuseki.create().destination("http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning/sparql");
+			
+			ArrayList<String[]> resp = new ArrayList<String[]>();
+			
+			try(RDFConnectionFuseki conn = (RDFConnectionFuseki) builder.build()) {
+			QueryExecution qe = conn.query(query);
+			qe.setTimeout(400);
+			ResultSet rsService = qe.execSelect();
+			if(!rsService.hasNext()) {
+				return null;
+			}
+	        do {
+	            QuerySolution qs = rsService.next();     
+	            RDFNode respA = qs.get("A");
+	            RDFNode respB = qs.get("B");
+	            String[] V= new String[3];
+	            V[0]=respA+"";
+	            V[1]=respB+"";
+	            count++;
+				resp.add(V);
+	            
+	            
+	        } while (rsService.hasNext());
+	        conn.close();
+			}
+			String[][] moldResp=new String[count][3];
+			//Coloca os resultados em um vetor
+			for(int i=0;i<moldResp.length;i++) {
+			moldResp[i]=resp.get(i);
+			}
+			
+			return moldResp;
+			
 		}
 		public String[][] genericSearchPoints(String one,String two, String three) {
 			int count=0;
@@ -784,7 +1074,7 @@ INSERT DATA{
 		
 			Query query=QueryFactory.create(string);
 			
-			RDFConnectionRemoteBuilder builder = RDFConnectionFuseki.create().destination("https://blindop.herokuapp.com/person");
+			RDFConnectionRemoteBuilder builder = RDFConnectionFuseki.create().destination("http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning/sparql");
 			
 	
 			try(RDFConnectionFuseki conn = (RDFConnectionFuseki) builder.build()) {
@@ -806,6 +1096,7 @@ INSERT DATA{
 		return resp.toString();	
 		}
 		
+		/*proxima instrução*/
 }
 		
 
