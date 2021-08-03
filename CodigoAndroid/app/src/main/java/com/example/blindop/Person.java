@@ -152,7 +152,8 @@ public class Person {
                 + "\nLast Name: " + getLastName();
     }*/
    private String id;
-
+    private String nome;
+    private String key;
     public String getId() {
         return id;
     }
@@ -177,12 +178,11 @@ public class Person {
         this.key = key;
     }
 
-    private String nome;
-    private String key;
+
     @Override
     public String toString() {
         return "First Name: " + getNome()
-                + "\nkey: " +  getKey();
+                + "\nkey: " +  getId();
     }
 
 }

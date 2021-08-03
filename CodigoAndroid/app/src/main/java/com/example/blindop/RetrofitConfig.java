@@ -11,7 +11,7 @@ public class RetrofitConfig {
     public RetrofitConfig() {
         this.retrofit = new Retrofit.Builder()
                // .baseUrl("https://viacep.com.br/ws/")
-                .baseUrl("http://ip-50-62-81-50.ip.secureserver.net:8080/")
+                .baseUrl("https://javablindop.herokuapp.com/")
                 .addConverterFactory(JacksonConverterFactory.create())
                 .build();
     }
@@ -21,4 +21,8 @@ public class RetrofitConfig {
     public PersonService getPersonService() {
         return this.retrofit.create(PersonService.class);
     }
+    public RotaService getRotaService() {
+        return this.retrofit.create(RotaService.class);
+    }
+
 }

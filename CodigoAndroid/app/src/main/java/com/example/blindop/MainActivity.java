@@ -25,7 +25,7 @@ import retrofit2.*;
 
 
 public class MainActivity<locationMangaer> extends AppCompatActivity {
-
+    Boolean m1=true;
     File configs;
     //Array de textos
     ArrayList<String> arraydirecoes=new ArrayList();
@@ -59,21 +59,21 @@ public class MainActivity<locationMangaer> extends AppCompatActivity {
   30: Suba escada X andares
   31: Desça escada X andares
   32: Pegue o elevador, suba para o andar X
-  32: Pegue o elevador, desça para o andar X
+  32: Pegue o elevador, desça para o andar X 
    */
 
     //Temporario: Mapa no formato vetor x y z para demonstração
     int[][][] mapa=new int[100][100][5]; //Dentro do z colocar o que tem lá: 0 para paredes,1 pra possui obstaculo conhecido,2 para andavel,3 botão do ponto de interesse
 
     //Text to speech
-    TextToSpeech dTTS;
+        TextToSpeech dTTS;
     Button btncep;
     TextView txtCep;
 
     TextView centralTxt;
     private LocationManager locationMangaer=null;
     private LocationListener locationListener=null;
-
+    int atual=0;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -113,7 +113,8 @@ public class MainActivity<locationMangaer> extends AppCompatActivity {
         btnFala.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 //dTTS.speak("TTS funcionando",dTTS.QUEUE_FLUSH,null,null);
-                speak("TTS Funcionando perfeitamente");
+              //  speak("TTS Funcionando perfeitamente");
+                nextText(0,atual);
             }
         });
 
@@ -123,6 +124,10 @@ public class MainActivity<locationMangaer> extends AppCompatActivity {
                 //BuscaCep();
                 //BuscaPessoa
                 BuscaPessoa();
+                    salvaChave(chavek);
+                String txtchave=lechave();
+                centralTxt.setText(txtchave);
+
             }
         });
 
@@ -147,10 +152,10 @@ public class MainActivity<locationMangaer> extends AppCompatActivity {
         }
 
         //Array de textos adicionado
-        arraydirecoes.add("Ande X passos para frente");
+       /* arraydirecoes.add("Ande X passos para frente");
         arraydirecoes.add("Ande X passos para esquerda");
         arraydirecoes.add("Ande X passos para trás");
-        arraydirecoes.add("Ande X passos para direita");
+        arraydirecoes.add("Ande X passos para direita");*/
         centralTxt.setText(txtchave);
 
 
@@ -235,7 +240,7 @@ public class MainActivity<locationMangaer> extends AppCompatActivity {
                 Person pessoa = response.body();
                 txtCep.setText(pessoa.toString());
                 centralTxt.setText("Conexão com o /login");
-                chavek=pessoa.getKey();
+                chavek=pessoa.getId();
             }
             @Override
             public void onFailure(Call<Person> call, Throwable t) {
@@ -246,37 +251,67 @@ public class MainActivity<locationMangaer> extends AppCompatActivity {
 
     }
 
-    public String nextText(int type,int number){
-        String[] fala=arraydirecoes.get(type).split(" ");
-        StringBuilder resultado=new StringBuilder();
-        for (int i=0; i<fala.length;i++ ) {
-            if(!fala[i].equals("X")) {
-                resultado.append(fala[i]+" ");
-            }
-            else{
-                //Caso opcode não seja de localização, substitui X por numero
-                if(type<20||type>=30) {
-                    resultado.append(number + " ");
+    public void nextText(int type,int number){
+        if(m1){
+            Rota();
+            m1=false;
+            return ;
+        }else {
+            /*String[] fala = arraydirecoes.get(type).split(" ");
+            StringBuilder resultado = new StringBuilder();
+            for (int i = 0; i < fala.length; i++) {
+                if (!fala[i].equals("X")) {
+                    resultado.append(fala[i] + " ");
+                } else {
+                    //Caso opcode não seja de localização, substitui X por numero
+                    if (type < 20 || type >= 30) {
+                        resultado.append(number + " ");
+                    } else {
+                        //Caso opcode esteja entre 20 e 29,procura number como index de localização
+                        resultado.append(interesses[number] + " ");
+                    }
                 }
-                else{
-                    //Caso opcode esteja entre 20 e 29,procura number como index de localização
-                    resultado.append(interesses[number]+ " ");
-                }
-            }
 
+            }*/
+
+            if(atual>=arraydirecoes.size()){
+                atual=0;
+                speak("Chegou ao fim");
+                centralTxt.setText("Chegou ao fim");
+                return;
+            }
+          String fala=arraydirecoes.get(number);
+          speak(fala);
+          centralTxt.setText(fala);
+          atual++;
+
+        return;
         }
+    }
+    public void Rota(){
 
-        return resultado.toString();
+        centralTxt.setText("Carregando rota");
+        //Call<CEP> call = new RetrofitConfig().getCEPService().buscarCEP();
+        Call<List<Rota>> call= new RetrofitConfig().getRotaService().buscaRota();
+        call.enqueue(new Callback<List<Rota>>() {
+            @Override
+            public void onResponse(Call<List<Rota>> call, Response<List<Rota>> response) {
+                List<Rota> Route = response.body();
+                //centralTxt.setText(Route.getPassos());
+                for(int i=0;i<Route.size();i++) {
+                    arraydirecoes.add("Ande " + Route.get(i).getPassos() + " em direção" + Route.get(i).getDirecao());
+                    centralTxt.setText("Ande " + Route.get(i).getPassos() + " em direção" + Route.get(i).getDirecao());
+                }
+
+            }
+            @Override
+            public void onFailure(Call<List<Rota>> call, Throwable t) {
+                centralTxt.setText("Falhou: "+t.getMessage());
+            }
+        });
     }
 
 
-    public void randomText(){
-        Random geranumero=new Random();
-        int a= (int) (geranumero.nextInt(4));
-        int b= (int) geranumero.nextInt(10);
-        nextroute=nextText(a,b);
-      //  dTTS.addSpeech(nextroute,"com.example.blindop",0);
-    }
 
 
     //Operações de inicialização: Preenche pontos de interesse
