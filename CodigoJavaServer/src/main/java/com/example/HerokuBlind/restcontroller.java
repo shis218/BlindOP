@@ -36,18 +36,68 @@ import org.springframework.web.bind.annotation.RestController;
 
 import ch.qos.logback.core.net.SyslogOutputStream;
 
+/**
+ * @author      Henrique Nakaema Simões <linknakaema@gmail.com>
+ * @version     1.0                
+ * @since       1.0         
+ */
 
-
+/**
+ * Classe principal RestController, responsavel pelos endpoints, utiliza a anotação @RestController antes da classe e
+ * para fazer os endpoints, é utilizado a anotação @GetMapping("/nomedoendpoint") antes de um metodo para fazer com que seu retorno seja exibido como resposta a um get em tal pagina. Uma das possibilidades é devolver um String e montar uma pagina HTML a partir disso. Outra possibilidade bastante usada nesse projeto é a devolução de um JSON.
+ */
 @RestController
 public class restcontroller {
+	/**
+	 * variaveis globais para salvar os grafos
+	 */
+		private String globGraph="";
+		private String globNonDirGraph="";
+		private String globDij="";
 
-		private static final String template = "Hello, %s!";
+		
 		private final AtomicLong counter = new AtomicLong();
+		
+		
+		/**
+		 * Primeiro HTML de entrada, pode ser considerado como o indexhtml, tem função de direcionar para as outras paginas
+		 * @return
+		 */
 		@GetMapping("/")
-		public Greeting greeting(@RequestParam(value = "name", defaultValue = "World") String name) {
-			name=getfuseki();
-			return new Greeting(counter.incrementAndGet(), String.format(template, name));
+		public String greeting() {
+			StringBuilder sb=new StringBuilder();
+			//int[][][] intmap=getMapa(nomemapa);
+			
+			
+			sb.append("<!DOCTYPE html>\r\n"
+					+ "<html>\r\n"
+					+ "<body>\r\n"
+					+ "\r\n"
+					+ "Bem vindo ao BlindOP, o seu operador de rotas em ambientes indoor"
+					+ "Links uteis:<br>"
+					+ "<a href=\"/mapa\">mapa</a><br>"
+					+ "<a href=\"/criaPontosDeInteresse\">Cria ponto de interesse</a><br>"
+					+ "<a href=\"ConectaPontoDeInteresse\">Conecta ponto de interesse</a><br>"
+					+ "<a href=\"dij\">Apenas o dijkstra</a><br>"
+					+ "<a href=\"dijgrafo\">Grafo em Dijsktra[Não implementado]</a><br>"
+					
+					+ "<Form action=\"rota\" method=\"get\">Rota ini: "
+					+"<input type=\"text\" id=\"inicio\" name=\"inicio\"> -> "
+					+"<input type=\"text\" id=\"fim\" name=\"fim\"><button> BuscaRota</button></form>ss"
+					+ "<a href=\"EntopeMapa\">Restaura mapa</a><br>"
+					+ "</body>\r\n"
+					+ "</html>\r\n"
+					+ "\r\n"
+					+ "");
+			return sb.toString();
 		}
+		
+		/**
+		 * devolve um JSON processado dos dados de login que estão no fuseki baseado no nome e key passados
+		 * @param nome
+		 * @param key
+		 * @return classe Person
+		 */
 		@GetMapping("/login")
 		public Person person(@RequestParam(value = "name", defaultValue = "World") String nome,@RequestParam(value = "key", defaultValue = "42") String key) {
 			Person p= new Person();
@@ -56,6 +106,10 @@ public class restcontroller {
 			p.setNome(nome);
 			return p;
 		}
+		
+		/**
+		 * {@return Utiliza o metodo getChaves para devolver a lista completa de logins}
+		 */
 		@GetMapping("/searchLogins")
 		public Object[] searchLogins() {
 			Object[] pt= getChaves();
@@ -66,6 +120,11 @@ public class restcontroller {
 			//return p;
 		}
 		
+		
+		/**
+		 * Tenta inserir o login no fuseki, inicialmente buscando todas as chaves, então utilizando um random, comparar se a chave já existe, se existir, gera uma nova chave, se nao existir, insere a nova chave no fuseki
+		 * @return a lista de chaves atualizada pelo getchaves()
+		 */
 		@GetMapping("/newLogin")
 		public Object[] newLogin() {
 			int rA=(int) ((Math.random() * (1000)));
@@ -89,11 +148,28 @@ public class restcontroller {
 			//return p;
 		}
 		
+		/**
+		 * Utiliza o metodo Dijkstra para verificar o menor caminho do Inicio e do Fim, então faz alguns tratamentos de string para buscar informações de cada nó e cada aresta de conexão entre os dois vertices definidos pelo caminho resultante do Dijkstra.
+		 * Foi utilizado uma estrategia de verificar se o retorno de GenericSearch era null, então pesquisando pelo nome de sujeito no Fuskei ao contrario
+		 * Caso não tenha uma remoção no meio do programa, é considerado que ao menos um desses dois ira ter retorno, já que eles foram utilizados no Dijkstra pra formular sua resposta.
+		 * Notas adicionais: 
+		 * rq2[0][0] se refere ao peso(distancia em metros) do unico elemento que deve ter sido retornado na pesquisa
+		 * numero de passos foi calculado como 1/3 dos metros
+		 * rq3[0][0] se refere a qual direção do unico elemento que deve ter sido retornado na pesquisa
+		 * Foi feito uma solução para que caso seja sempre feito da forma correta as inserções, quando se busca o generic search inverso, ele também inverta a direção que é adicionado na rota
+		 * exemplo: Considerando que a adição entrada-corredor é feita na direção Sul, então um caminho corredor->entrada é em direção norte 
+		 * @param mapa [Nome do mapa, não utilizado]
+		 * @param vertIniName [Qual o inicio]
+		 * @param vertFimName [Qual o fim]
+		 * @return Json com o array de cada nó de rota que deve ser usado
+		 * @throws InterruptedException
+		 */
+		
 		@GetMapping("/rota")
 		public Rota[] rota(@RequestParam(value = "lugar", defaultValue = "mapaEach") String mapa,@RequestParam(value = "inicio", defaultValue = "Entrada") String vertIniName,@RequestParam(value = "fim", defaultValue = "Saida") String vertFimName) throws InterruptedException {
-			String txt=Dijkm(vertIniName,vertFimName);
 			
-			System.out.println(txt+"\n\n");
+			String txt=Dijkm(vertIniName,vertFimName);
+			System.out.println(txt+"\n");
 		//	Rota[] rtm=getrota(mapa);
 			txt=txt.replace("[", "")	;
 			txt=txt.replace("]", "")	;
@@ -102,6 +178,7 @@ public class restcontroller {
 			Rota[] rts=new Rota[pontos.length-1];
 			
 			for(int in=0;in<pontos.length-1;in++) {
+				boolean inverte=false;
 				Rota r=new Rota();
 				
 
@@ -115,27 +192,75 @@ public class restcontroller {
 				}
 				rq2[0][0]=CleanXSD(rq2[0][0]);
 				r.setMetros(Float.parseFloat(rq2[0][0]));
-				r.setPassos((int)Float.parseFloat(rq2[0][0])/10);
+				r.setPassos((int)Float.parseFloat(rq2[0][0])/3);
 				String[][] rq3=this.genericSearch1("<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST"+nome1+""+nome2+">", "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#direct>", "?A");
 				if(rq3==null) {
+					inverte=true;
 					rq3=this.genericSearch1("<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST"+nome2+""+nome1+">", "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#direct>", "?A");
 				}
 				rq3[0][0]=CleanXSD(rq3[0][0]);
+				if(inverte==false) {
 				r.setDirecao(CleanXSD(rq3[0][0]));
+				}
+				else {
+					//Caso seja buscado o inverte, então muda a direção proposta
+					if(rq3[0][0].toLowerCase().contains("sul")) {
+						r.setDirecao("norte");
+					}
+					if(rq3[0][0].toLowerCase().contains("norte")) {
+						r.setDirecao("sul");
+					}
+					if(rq3[0][0].toLowerCase().contains("leste")) {
+						r.setDirecao("oeste");
+					}
+					if(rq3[0][0].toLowerCase().contains("oeste")) {
+						r.setDirecao("sul");
+					}
+				}
 				rts[in]=r;
 				}
 				
 			
 			return rts;
 		}
+		
+		/**
+		 * Preparações:
+		 * >Chama o metodo getMapa para ter a matriz de paredes do mapa
+		 * >Chama o metodo getPontosDeInteresse para ter a matriz de pontos de interesse contendo [index][0] nome [index][1] coordenadaX [index][1] coordenadaY
+		 * >Chama o Dijkstra para entrada e saida apenas para produzir o grafo não direcionado sem pesos do mapa e salva na variavel md para uso futuro
+		 * >faz um replace em md para manter a usabilidade do Mermaid. (Talvez isso não seja necessario, fazer testes no futuro)
+		 * 
+		 * Execução da escrita da pagina:
+		 * >Utilizando um string builder, adiciona as tags basicas do HTML
+		 * >Cria um canvas
+		 * >Abre um JavaScript que trabalha com preencher esse canvas, o atributo lineWidth pode ser usado para alterar a grossura da linha e fillStyle a cor dos elementos escritos posteriormente.
+		 * >Faz um for percorrendo a matriz do mapa,  utiliza a combinação no canvas moveTo+lineTo passando um par ordenado de inicio e fim da linha, então utiliza o metodo Stroke() pra desenhar essa linha, esta foi a solução usada para desenhar o mapa em um canvas HTML
+		 * >Caso no get possua um rotaIni(pode ser feito no formulario no fim da pagina ou passado diretamente na url) executa o dijkstra e coloca uma linha pela rota
+		 * Foi utilizado a informações de pontos de interesses obtidas na preparação para pegar a coordenada de cada ponto de interesse e usar o combo moveTo e LineTo para criar as linhas
+		 * >Percorre a lista de pontos de interesse, colocando seus nomes no canvas. Obs: Por conta da solução encontrada para colocar nomes entre as ligações como "meio+numero", caso o ponto de interesse contenha a substring "meio", então ela não é exibida de forma escrita no mapa nem listada nos pontos de interesse do aplicativo. Mas ira aparecer no grafo
+		 * >Faz um script de chamada do Mermaid e coloca entre as divs "mermaid" o texto que produz o grafo. Este texto é gerado pelo metodo dijkstra.
+		 * >Faz um formulario para chamar rota para esta mesma pagina. 
+		 * >Finaliza as tags html e retorna a pagina.
+		 * @param nomemapa [Nao utilizado corretamente]
+		 * @param rotar [Caso tenha rota, Qual o inicio]
+		 * @param rotaro [Caso tenha rota, Qual o fim]
+		 * @return String de HTML de um mapa dinamico, junto com o grafo deste mapa
+		 * @throws InterruptedException
+		 */
 		@GetMapping("/mapa")
-		public String mapear(@RequestParam(value = "lugar", defaultValue = "mapaEach") String nomemapa) throws InterruptedException {
+		public String mapear(@RequestParam(value = "lugar", defaultValue = "mapaEach") String nomemapa,@RequestParam(value = "rotaIni", defaultValue = "ch0") String rotar,@RequestParam(value = "rotaFim", defaultValue = "ch0") String rotaro) throws InterruptedException {
 			StringBuilder sb=new StringBuilder();
+			
 			int[][][] intmap=getMapa(nomemapa);
 			//int[][][] intmap=null;
-			String[][] strPontosDeInteresse=this.getPontosDeInteresse();
-			System.out.println(strPontosDeInteresse[0][1]);
-			
+			String[][] strPontosDeInteresse=this.getPontosDeInteresse();		
+			Dijkm("Entrada","saida");
+		    String md=this.globNonDirGraph;
+		    md=md.replaceAll("(\r\n|\n)", "\n");
+		        
+		        
+		        
 			sb.append("<!DOCTYPE html>\r\n"
 					+ "<html>\r\n"
 					+ "<body>\r\n"
@@ -149,41 +274,93 @@ public class restcontroller {
 					+ "<script>\r\n"
 					+ "var canvas = document.getElementById(\"myCanvas\");\r\n"
 					+ "var ctx = canvas.getContext(\"2d\");\r\n"
-					+ "ctx.lineWidth = 0.3;\r\n");
+					+ "ctx.lineWidth = 1.2;\r\n");
 			
-			for(int i=0;i<255;i++) {
+			for(int i=0;i<intmap[0].length;i++) {
 			
 			sb.append("ctx.moveTo("+intmap[0][i][0]+","+ intmap[0][i][1]+");");
 			sb.append("ctx.lineTo("+intmap[0][i][2]+","+ intmap[0][i][3]+");");
-			sb.append("ctx.stroke();");
-			sb.append("ctx.moveTo("+strPontosDeInteresse[i][1]+","+ strPontosDeInteresse[i][2]+");");
-		//	int a=Integer.parseInt(strPontosDeInteresse[i][1])+3;
-			//int b=Integer.parseInt(strPontosDeInteresse[i][2]);
-		//	sb.append("ctx.moveTo("+a+","+ b+");");
-		//	sb.append("ctx.stroke();");
+			sb.append("ctx.stroke();\n");
 			}
-			
-			
-			
-					sb.append("</script>\r\n");
-					for(int i=0;i<255;i++) {
+			Rota[] rts=null;
+			if(!rotar.equals("ch0")) {
+				String txt=Dijkm(rotar,rotaro);
+				txt=txt.replace("[", "")	;
+				txt=txt.replace("]", "")	;
+				String[] pontos= txt.split(",");
+				//Tamanho é -1 pois na ultima posição já chegou no destino e não precisa andar mais
+				rts=new Rota[pontos.length-1];
+			sb.append("ctx.lineWidth = 0.2;\r\n ctx.fillStyle = \"#FF0000\";");
+				
+				for(int in=0;in<pontos.length-1;in++) {
+					
+					Rota r=new Rota();				
+					String nome1=pontos[in].trim();
+					for(int j=0;j<strPontosDeInteresse.length;j++) {
+						if(strPontosDeInteresse[j][0].equals(nome1)) {
+							sb.append("ctx.moveTo("+strPontosDeInteresse[j][1]+","+ strPontosDeInteresse[j][2]+");");
+						}
+						
+						
+							
+					}
+					String nome2=pontos[in+1].trim();
+					for(int j=0;j<strPontosDeInteresse.length;j++) {
+						if(strPontosDeInteresse[j][0].equals(nome2)) {
+							sb.append("ctx.lineTo("+strPontosDeInteresse[j][1]+","+ strPontosDeInteresse[j][2]+");");
+							sb.append("ctx.stroke();\n");
+							
+						}
+					}
+				
+				
+				
+				}
+			}
+				sb.append("ctx.font = \"12px Arial\";");
+					
+					for(int i=0;i<strPontosDeInteresse.length;i++) {
 						if(!(strPontosDeInteresse[i][0]==null)) {
 							if(!strPontosDeInteresse[i][0].contains("meio")) {
-							sb.append(strPontosDeInteresse[i][0]+"<br> \n");
-							sb.append("<button style='position: absolute; top:"+strPontosDeInteresse[i][2]+"px; left:"+strPontosDeInteresse[i][1]+"px;' onclick='myFunction()'>"+strPontosDeInteresse[i][0]+"</button>"); 
-					//		sb.append(strPontosDeInteresse[i][1]+"<br> \n");
-					//		sb.append(strPontosDeInteresse[i][2]+"<br> \n");
+							//sb.append(strPontosDeInteresse[i][0]+"<br> \n");
+							sb.append("ctx.fillText(\""+strPontosDeInteresse[i][0]+"\","+strPontosDeInteresse[i][1]+","+strPontosDeInteresse[i][2]+");\n");
 							}
 						}
 					}
+					sb.append("</script>\r\n");
 					sb.append("\r\n"
+					+"<div class=\"mermaid\"> ");
+					sb.append(md);        
+					sb.append(";</div>"
+	        		+ "        <script src=\"https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js\"></script>\r\n"
+					+ "        <script>\r\n"
+					+ "            mermaid.initialize({ startOnLoad: true });\r\n"
+					+ "        </script>\r\n"
+	        
+					+ "<form>"   //Fazendo um form que leva a propria pagina
+					+ "Inicio:<input name='rotaIni' id='rotaIni' value='"+rotar+"'><br>"
+					+ "Fim:<input name='rotaFim' id='rotaFim' value='"+rotaro+"'><br>"
+					+ "<button>Rota</button><br>"
+					+ "</form>"
 					+ "</body>\r\n"
 					+ "</html>\r\n"
 					+ "\r\n"
 					+ "");
+//					System.out.print(sb.toString());
 			return sb.toString();
 		}
 		
+		/**
+		 * Formulario para criação de mapa
+		 * Caso o valor não seja o default "Parede0", produz uma string de insert sparql com os valores de variavel nos parametros, então chama a função InsertGenerico que faz o update com essa string passada.
+		 * @param nomemapa
+		 * @param nomeParede
+		 * @param posXini
+		 * @param posXfim
+		 * @param posYini
+		 * @param posYfim
+		 * @return
+		 */
 		@GetMapping("/criamapa")
 		public String criamapa(@RequestParam(value = "lugar", defaultValue = "mapaEach") String nomemapa,@RequestParam(value = "nomeParede", defaultValue = "Parede0") String nomeParede,  @RequestParam(value = "posXini", defaultValue = "0") String posXini,  @RequestParam(value = "posXfim", defaultValue = "0") String posXfim,  @RequestParam(value = "posYini", defaultValue = "0") String posYini,  @RequestParam(value = "posYfim", defaultValue = "0") String posYfim) {
 			StringBuilder sb=new StringBuilder();
@@ -228,6 +405,13 @@ public class restcontroller {
 			return sb.toString();
 		}
 		
+		/**
+		 * Coloca o resultado de Dijkstra como HTML
+		 * @param vertIniName
+		 * @param vertFimName
+		 * @return
+		 * @throws InterruptedException
+		 */
 		@GetMapping("/dij")
 		public String Dijk(@RequestParam(value = "inicio", defaultValue = "Entrada") String vertIniName,@RequestParam(value = "fim", defaultValue = "Saida") String vertFimName) throws InterruptedException {
 
@@ -245,11 +429,34 @@ public class restcontroller {
 			return sb.toString();
 		}
 		
+		/**
+		 * metodo de Dijkstra, utiliza o criado pelo autor ArtLovan
+		 * Preparações:
+		 * >Chama o metodo getPontosDeInteresse para ter a matriz de pontos de interesse contendo [index][0] nome [index][1] coordenadaX [index][1] coordenadaY
+		 * >Coloca a string "graph TD\n" no grafo que sera passado globalmente para gerar scripts pro mermaid
+		 * >Cria uma hashtable que o par é de "nome do vertice" e "classe vertice" com o proposito de recuperar a classe de forma facil
+		 * >Cria um array apenas com os nomes, dessa forma sendo possivel iterar sobre eles, no futuro uma boa refatoração de codigo seja apenas usar os dados obtididos no getpontos de interesse, pois estao redundantes
+		 * 
+		 * Algoritmo:
+		 * Faz um FOR por todos pontos de interesse e cria uma instancia de classe vertice, preenchendo com nome, assim como colocando na hashtable e salvando o nome no vetor Nomes 
+		 * Faz um FOR pelos nomes, buscando todas as conexões para o ponto de interesse que contem o nome atual 
+		 * Percorre a lista de conexões, recupera o vertice que contem o nome dessa conexão, adiciona adjacencia com o vertice atual usando a informação de distancia
+		 * Também é escrito nas variaveis para o mermaid na forma "vertice1 --- vertice2\n" e  "vertice1 --- |distancia| vertice2\n", possui um IF extra para impedir que seja duplicado a inserção de vertice1-vertice2 e vertice2-vertice1		 *
+		 * >Roda o algoritmo de Dijkstra para esses vertices e arestas, com o parametro do vertice inicial vertIniName.
+		 * >Coloca o menor caminho em uma String txt que é dado como resposta
+		 * Adiciona informações da rota no String do Mermaid  mudando a cor das caixas
+		 * Coloca essas strings de Mermaid em variaveis globais
+		 * @param vertIniName Nome do ponto de interesse de Inicio
+		 * @param vertFimName Nome do ponto de interesse de Fim
+		 * @return String contendo um "array" de nomes dos pontos de interesse com o menor caminho entre inicio-fim
+		 * @throws InterruptedException
+		 */
 		public String Dijkm(String vertIniName,String vertFimName) throws InterruptedException {
 
 			//Source: https://gist.github.com/artlovan/a07f29e16ab725f8077157de7abdf125
 			String[][] strPontosDeInteresse=this.getPontosDeInteresse();
-			
+			StringBuilder graph=new StringBuilder("graph TD\n");
+			StringBuilder graph2=new StringBuilder("graph TD\n");
 			Hashtable<String, Vertex> g=new Hashtable<String, Vertex>();
 			String[] nomes=new String[strPontosDeInteresse.length];
 			//Cria todos vertices
@@ -265,8 +472,6 @@ public class restcontroller {
 			}
 			//Adiciona as conexões entre vertices
 			 for(int i=0;i<nomes.length;i++) {
-			//	 System.out.print("\n"+resp[i][0]+ "   = "+resp[i][1]);
-				// Vertex V=g.get(nomes[i]);
 				 if(nomes[i]==null) {
 					 break;
 				 }
@@ -277,10 +482,24 @@ public class restcontroller {
 				 }
 				 else {
 					 for(int j=0;j<conectaCom.length;j++) {
+						 try {
 						 Vertex m=g.get(conectaCom[j][0]);
+						 //graph.append(m.getName()+" --> |"+Float.parseFloat(conectaCom[j][1])+"| "+g.get(nomes[i]).getName()+"\n");
+						 //Se nao tiver o inverso, adiciona
+						 if(!graph2.toString().contains(g.get(nomes[i]).getName()+" --- "+m.getName())) {
+						 graph2.append(m.getName()+" --- "+g.get(nomes[i]).getName()+"\n");
+						 graph.append(m.getName()+" --- |"+Float.parseFloat(conectaCom[j][1])+"| "+g.get(nomes[i]).getName()+"\n");
+						 }
+						 System.out.print(m.getName());
 						g.get(nomes[i]).addNeighbour(new Edge(Float.parseFloat(conectaCom[j][1]),g.get(nomes[i]),g.get(conectaCom[j][0])));
+						 }
+						 catch(Exception E) {
+							 continue;
+						 }
 					 }
 				 }
+				 
+				
 				 
 			 }
 			 Dijkstra dijkstra = new Dijkstra();
@@ -290,58 +509,125 @@ public class restcontroller {
 		        StringBuilder sb=new StringBuilder();
 
 		        sb.append(txt);        
-		       
+		        //Geração de codigo pro mermaid:
+		        String result2= txt.replace("[", "");
+		        result2= result2.replace("]", "");
+		        String[] locs=result2.split(",");
+		        for(int x=0;x<locs.length;x++) {
+		        	if(x==0) {
+		        		graph.append("style "+locs[x].trim()+" fill:#42692F \n");	
+		        	}
+		        	else if(x==locs.length-1) {
+		        		graph.append("style "+locs[x].trim()+" fill:#65FF00 \n");	
+		        	}
+		        	else {
+		        	graph.append("style "+locs[x].trim()+" fill:#BD96D0 \n");
+		        	}
+		        }
+		        result2= result2.replace(",", " --> ");
+		        this.globGraph=(graph.toString());
+		        this.globNonDirGraph=(graph2.toString());
+		        this.globDij=("graph TD\n"+result2+"\n \n \n \n");
 						
 			return sb.toString();
 		}
+		/**
+		 * {@return Gera HTML contendo um Mermaid gerado pelo Dijkstra, embora não considera rota}
+		 * @throws InterruptedException
+		 */
+		
+		@GetMapping("/grafo")
+		public String graf() throws InterruptedException {
+			
+	        Dijkm("Entrada","Saida");
+	        String md=this.globNonDirGraph;
+	        md=md.replaceAll("(\r\n|\n)", "\n");
+	        StringBuilder sb=new StringBuilder();
+	        sb.append("<!DOCTYPE html>\r\n"
+					+ "<html>\r\n"
+					+ "<body>\r\n"
+	        +"<div class=\"mermaid\"> ");
+	        sb.append(md);        
+	        sb.append(";</div>"
+	        		+ "        <script src=\"https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js\"></script>\r\n"
+					+ "        <script>\r\n"
+					+ "            mermaid.initialize({ startOnLoad: true });\r\n"
+					+ "        </script>\r\n"
+	        		+ " </body>\r\n"
+				+ "</html>\r\n"
+				+ "\r\n"
+				+ "");
+					
+	        System.out.print(sb.toString());
+		return sb.toString();
+	}
 		
 		
-		@GetMapping("/dijExemplo")
-		public String dijExemplo() {
-			
-			//Source: https://gist.github.com/artlovan/a07f29e16ab725f8077157de7abdf125
-			
-			  Vertex v1 = new Vertex("A");
-		        Vertex v2 = new Vertex("B");
-		        Vertex v3 = new Vertex("C");
-
-		        v1.addNeighbour(new Edge(1, v1, v2));
-		        v1.addNeighbour(new Edge(10, v1, v2));
-
-		        v2.addNeighbour(new Edge(1, v2, v3));
-
-		        Dijkstra dijkstra = new Dijkstra();
-		        dijkstra.computePath(v1);
-
-		        String txt=dijkstra.getShortestPathTo(v2).toString();
+	
+		/**
+		 * {@return Gera HTML contendo um Mermaid gerado pelo Dijkstra,considerando rota, então é o grafo colorido}
+		 * @throws InterruptedException
+		 */
+		@GetMapping("/grafoRota")
+		public String graf2(@RequestParam(value = "inicio", defaultValue = "Entrada") String vertIniName,@RequestParam(value = "fim", defaultValue = "Saida") String vertFimName) throws InterruptedException {
+			 Dijkm(vertIniName,vertFimName);
+		        String md=this.globDij;
+		        md=md.replaceAll("(\r\n|\n)", "\n");
 		        StringBuilder sb=new StringBuilder();
 		        sb.append("<!DOCTYPE html>\r\n"
 						+ "<html>\r\n"
-						+ "<body>\r\n");
-		        sb.append(txt);        
-		        sb.append("</body>\r\n"
+						+ "<body>\r\n"
+		        +"<div class=\"mermaid\"> ");
+		        sb.append(md);        
+		        sb.append(";</div>"
+		        		+ "        <script src=\"https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js\"></script>\r\n"
+						+ "        <script>\r\n"
+						+ "            mermaid.initialize({ startOnLoad: true });\r\n"
+						+ "        </script>\r\n"
+		        		+ " </body>\r\n"
 					+ "</html>\r\n"
 					+ "\r\n"
 					+ "");
 						
+		        System.out.print(sb.toString());
 			return sb.toString();
-		}
-		@GetMapping("/String")
-		public String Vertices() throws InterruptedException {
-			StringBuilder sb=new StringBuilder();
-			sb.append(" "
-						+ "<html>\r\n"
-						+ "<body>\r\n");
-		        sb.append(this.getConexoesPontosDeInteresse("Entrada")[0][0]);
-		        sb.append(this.getConexoesPontosDeInteresse("Entrada")[0][1]);  
-		        sb.append("</body>\r\n"
-					+ "</html>\r\n"
-					+ "\r\n"
-					+ "");
-						
-			return sb.toString();
-		}
+	}
+		/**
+		 * {@return Gera HTML contendo um Mermaid gerado pelo Dijkstra,considerando rota, então é o grafo colorido e também possui as informações de distancia}
+		 * @throws InterruptedException
+		 */
 		
+		@GetMapping("/grafoComPeso")
+		public String graf3(@RequestParam(value = "inicio", defaultValue = "Entrada") String vertIniName,@RequestParam(value = "fim", defaultValue = "Saida") String vertFimName) throws InterruptedException {
+			
+	        Dijkm(vertIniName,vertFimName);
+	        String md=this.globGraph;
+	        md=md.replaceAll("(\r\n|\n)", "\n");
+	        StringBuilder sb=new StringBuilder();
+	        sb.append("<!DOCTYPE html>\r\n"
+					+ "<html>\r\n"
+					+ "<body>\r\n"
+	        +"<div class=\"mermaid\"> ");
+	        sb.append(md);        
+	        sb.append(";</div>"
+	        		+ "        <script src=\"https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js\"></script>\r\n"
+					+ "        <script>\r\n"
+					+ "            mermaid.initialize({ startOnLoad: true });\r\n"
+					+ "        </script>\r\n"
+	        		+ " </body>\r\n"
+				+ "</html>\r\n"
+				+ "\r\n"
+				+ "");
+					
+	        System.out.print(sb.toString());
+		return sb.toString();
+	}
+		
+		/**
+		 * Execução void que deleta paredes anteriores e adiciona novas paredes como um spam de inserts iguais ao /criamapa
+		 * Desta forma facilita a inserção em massa de dados ao fuseki
+		 * Uma melhor forma de que um metodo no futuro pegue essas coordenadas de algum arquivo
+		 */
 		@GetMapping("/EntopeMapa")
 		public void EntopeMapa() {
 			String nomeParede="Parede";
@@ -376,7 +662,7 @@ public class restcontroller {
 		                +"<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:coordenadaYinicio> "+posYini[i]+";\r\n"
 		                +"<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:coordenadaYFim> "+posYfim[i]+".\r\n"	
 		                + "};";
-				System.out.print("\n"+string);
+		
 				this.InsertGenerico(string);
 				//Insere referencia no mapa 
 				String string2="PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n prefix owl: <http://www.w3.org/2002/07/owl#> \n"
@@ -389,8 +675,37 @@ public class restcontroller {
 				
 			}	
 		}
+		/**
+		 * {@return JSON de pontos de interesse obitidos pelo  metodo getPontosDeInteresse}
+		 * @throws InterruptedException
+		 */
 		
-		
+		@GetMapping("/Interesses")
+		public PontosDeInteresse[] getInteresses() throws InterruptedException {
+			
+			
+			String[][] strPontosDeInteresse=this.getPontosDeInteresse();
+			PontosDeInteresse[] resp=new PontosDeInteresse[strPontosDeInteresse.length];
+			for(int i=0;i<resp.length;i++) {
+			PontosDeInteresse a=new PontosDeInteresse();
+			a.setNomeinteresse(strPontosDeInteresse[i][0]);
+			a.setCordX(strPontosDeInteresse[i][1]);
+			a.setCordY(strPontosDeInteresse[i][2]);
+			resp[i]=a;
+			}
+			
+			return resp;
+		}
+		/**
+		 * Formulario para criação de ponto de interesse
+		 * Caso o valor não seja o default "CH0", produz uma string de insert sparql com os valores de variavel nos parametros, então chama a função InsertGenerico que faz o update com essa string passada.
+		 * As classes alvos dessa inserção são gml::Point e IndoorNavi::RoutenodeType
+		 * @param nomemapa
+		 * @param nomeInteresse
+		 * @param posXini
+		 * @param posYini
+		 * @return
+		 */
 		
 		@GetMapping("/criaPontosDeInteresse")
 		public String criaInteresse(@RequestParam(value = "lugar", defaultValue = "mapaEach") String nomemapa,@RequestParam(value = "nomeInteresse", defaultValue = "CH0") String nomeInteresse,  @RequestParam(value = "posXini", defaultValue = "0") String posXini,  @RequestParam(value = "posYini", defaultValue = "0") String posYini) {
@@ -431,6 +746,20 @@ public class restcontroller {
 			
 			return sb.toString();
 		}
+		
+		/**
+		 * Formulario para criação de conexões de pontos de interesse
+		 * Os parametros são que um ponto se conecta com outro ponto e qual direção isso é feito
+		 * Caso o valor não seja o default "CH0", produz uma string de insert sparql com os valores de variavel nos parametros, então chama a função InsertGenerico que faz o update com essa string passada.
+		 * A classe alvo deste insert é IndoorNavi::RouteSegmentType. Foi adicionada o predicado direct aqui, deve ser tratado apropriadamente no futuro
+		 * @param nomemapa
+		 * @param nomeInteresse
+		 * @param nomeConecta
+		 * @param direcao
+		 * @param distancia
+		 * @return
+		 */
+		
 		@GetMapping("/ConectaPontoDeInteresse")
 		public String ConectaPontoDeInteresse(@RequestParam(value = "lugar", defaultValue = "mapaEach") String nomemapa,@RequestParam(value = "nomeInteresse", defaultValue = "CH0") String nomeInteresse,@RequestParam(value = "nomeConecta", defaultValue = "CH1") String nomeConecta,@RequestParam(value = "direcao", defaultValue = "norte") String direcao,@RequestParam(value = "distancia", defaultValue = "0") String distancia ) {
 			StringBuilder sb=new StringBuilder();
@@ -468,11 +797,16 @@ public class restcontroller {
 			return sb.toString();
 		}
 		
+		/**
+		 * Faz a conexão com o fuseki e utiliza a classe UpdateRequest para passar uma String SPARQL 
+		 * @param string A string que deve ser passada para o SPARQL endpoint de update do Fuseki
+		 */
+		
 		public void InsertGenerico(String string) {			
 			 RDFConnectionRemoteBuilder builder = RDFConnectionFuseki.create().destination("http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning/update");
 		        try(RDFConnectionFuseki conn = (RDFConnectionFuseki) builder.build()) {
 
-		        	/*String do insert
+		        	/*String do insert exemplo:
 		        	String string="PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n prefix owl: <http://www.w3.org/2002/07/owl#> \n"
 		        					+ "INSERT DATA{	\r\n"
 		        	                + "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#Usuario"+rA+"> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:key> "+rA+" \r\n"
@@ -494,12 +828,14 @@ public class restcontroller {
 		
 	}
 		private String[][] getPontosDeInteresse() throws InterruptedException {
-			String[][] resp=new String[2550][3]; //String array[index] 0-: Nome 1:-Pos X, 2:Pos Y
+			String[][] genSize=this.genericSearch1("?C", "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#gml:point>","?A");
+			String[][] resp=new String[genSize.length][3]; //String array[index] 0-: Nome 1:-Pos X, 2:Pos Y
 			String uriCoord;
 			String[] uriCoords=new String[2550];
 			String string="SELECT ?A ?C {?A <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#gml:point> ?C}";
+			
 			String nomeCoord;
-			String[] nomesCoords=new String[2550];
+			String[] nomesCoords=new String[genSize.length];
 			Query query=QueryFactory.create(string);
 			int vi=0;
 			int maxVi=0;
@@ -519,7 +855,7 @@ public class restcontroller {
 				            StringBuilder sb=new StringBuilder();
 				            
 				            
-				            System.out.println("\n BareURL "+uriCoordRaw+"\n" );
+				          
 				            //Remove a uri do nome
 				            uriCoord=(uriCoordRaw+"").replace("^^http://www.w3.org/2001/XMLSchema#anyURI","");
 				            uriCoord=(uriCoord+"").replace("eger","");
@@ -529,7 +865,7 @@ public class restcontroller {
 				            uriCoord=sb.toString();
 				            nomeCoord=uriCoord.replace("<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#", "");
 				            nomeCoord=nomeCoord.replace(">","");
-				            System.out.println("Nome coord:"+nomeCoord);
+				            
 				            uriCoords[vi]=uriCoord+"";
 				            resp[vi][0]=nomeCoord+"";
 				            vi++;
@@ -542,7 +878,7 @@ public class restcontroller {
 			vi=0;   
 			while(vi<maxVi) {
 				String[][] resultsQuery=this.genericSearchPoints(uriCoords[vi], "?B", "?C");        
-				System.out.println("Fim do problema1");
+				
 				//Primeira [PosX]
 				            String coordTypeRaw =resultsQuery[0][1];
 				            String value = resultsQuery[0][2];
@@ -556,7 +892,7 @@ public class restcontroller {
 				            	cType=2; 
 				            }
 				            
-				            System.out.println(""+coordType+ " "+cType);
+				            
 				            //Se nao for nenhum tipo,vai para o proximo e nao faz nada
 				            if(cType!=-1) {
 				            	//Remove o XSD:Int e XSD:String do valor
@@ -564,8 +900,8 @@ public class restcontroller {
 					            keylimpa=(keylimpa+"").replace("^^http://www.w3.org/2001/XMLSchema#String","");
 				            	keylimpa=(keylimpa+"").replace("eger","");
 					            
-					            System.out.print(keylimpa); 	
-				            	
+					    	
+				            	System.out.println(""+coordType+ " :"+ keylimpa);	
 					            resp[vi][cType]=keylimpa;
 				            }		
 				            
@@ -590,7 +926,7 @@ public class restcontroller {
 					            keylimpa=(keylimpa+"").replace("^^http://www.w3.org/2001/XMLSchema#String","");
 				            	keylimpa=(keylimpa+"").replace("eger","");
 					            
-					            System.out.print(keylimpa); 	
+					          
 				            	
 					            resp[vi][cType]=keylimpa;
 					            vi++;
@@ -598,7 +934,6 @@ public class restcontroller {
 
 				            
 					}				
-				System.out.println("Prox Exec");
 				return resp;
 			}
 		
@@ -607,31 +942,23 @@ public class restcontroller {
 		
 		private String UriToURL(String uri) {
 			StringBuilder sb=new StringBuilder();
-            
-            
-//            System.out.println("\n BareURL "+uri+"\n" );
             //Remove a uri do nome
             uri=(uri+"").replace("^^http://www.w3.org/2001/XMLSchema#anyURI","");
             uri=(uri+"").replace("eger","");
             sb.append("<");
             sb.append(uri);
             sb.append(">"); //Adiciona abre e fecha
-           // System.out.println("\n Transformed URL "+sb.toString()+"\n" );
 			return sb.toString();
 		}
 		
 		
 		private String CleanRST(String uri, String nomeConecta) {
 			StringBuilder sb=new StringBuilder();
-			//"<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST"+nomeInteresse+""+nomeConecta+">
-            
-            System.out.println("\n BareURL "+uri+"\n" );
-            //Remove a uri do nome
+            //Remove a uri do nome, RST e qualquer outro NomeConecta junto
             uri=(uri+"").replace("<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST","");
+            //uri=(uri+"").replace("RST","");
             uri=(uri+"").replace(">","");
-            uri=(uri+"").replace(nomeConecta,"");
-            
-            System.out.println("\n Transformed URL "+uri+"\n" );
+            uri=(uri+"").replace(nomeConecta,"");          
 			return uri;
 		}
 		private String CleanXSD(String value) {
@@ -656,15 +983,12 @@ public class restcontroller {
 				for(int in=0;in<resultsQuery.length;in++) {
 				resp[in][0]=CleanRST(resultsQuery[in][0],nomeInteresse);
 				resp[in][0]=resp[in][0].replace("http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST", "");
-				//System.out.println(resultsQuery[in][0]);
 				String[][] rq2=this.genericSearch1(UriToURL(resultsQuery[in][0]), "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#weight>", "?A");
 				resp[in][1]=CleanXSD(rq2[0][0]);
 				String[][] rq3=this.genericSearch1(UriToURL(resultsQuery[in][0]), "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#direct>", "?A");
 				resp[in][2]=CleanXSD(rq3[0][0]);
 				}
-				/*for(int i=0;i<resp.length;i++) {
-					System.out.print("\n"+resp[i][0]+ "   = "+resp[i][1]);
-				}*/
+
 				return resp;
 			}
 
@@ -696,34 +1020,6 @@ public class restcontroller {
 		}
 		
 		
-		/*PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-prefix owl: <http://www.w3.org/2002/07/owl#>
-
-
-
-INSERT DATA{	
-<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#Usuario2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp::person>
-};
-
-INSERT DATA{ 
-<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#Usuario2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> owl:NamedIndividual
-};
-
-
-INSERT DATA{	
-<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#Usuario2> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:key> "29"^^
-};		 
-		 */
-		public  String getFeaturesOfInterest() {
-	        return getfuseki() + "SELECT ?uri ?hasProperty ?type WHERE{\n" +
-	                "  ?uri a ?subClass;\n" +
-	                "  ssn:hasProperty ?hasProperty ;\n" +
-	                "  rdf:type ?type .\n" +
-	                "  ?subClass rdfs:subClassOf sosa:FeatureOfInterest\n" +
-	                "  FILTER(?type != owl:NamedIndividual)\n" +
-	                "}";
-	    }
 		
 		public Rota[] getrota(String nomeMapa) {
 			Rota[] route=new Rota[200];
@@ -769,19 +1065,7 @@ INSERT DATA{
 			//Num grafo: Qual o index desse ponto
 			//Tipo de coordenada: 0:coordenada x inicio, 1: coordenada y inicio, 2: coordenada x fim, 3: coordenada y fim
 			int[][][] resp=new int[3][255][4];
-			/*resp[0][0][0]=172;
-			resp[0][0][1]=0;
-			resp[0][0][2]=172;
-			resp[0][0][3]=25;
-			
-			resp[0][1][0]=172;
-			resp[0][1][1]=25;
-			resp[0][1][2]=578;
-			resp[0][1][3]=100;
-			*/
-			//int vi=1;
-		//	String uriParede="<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#Parede"+vi+">";
-			
+		
 			String uriParede;
 			String string="SELECT ?C {<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#"+nomeMapa +"> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#uri> ?C}";
 			Query query=QueryFactory.create(string);
@@ -797,10 +1081,8 @@ INSERT DATA{
 			        do {
 				            QuerySolution qs = rsService.next();
 				            RDFNode uriParedeRaw = qs.get("C");
-				            StringBuilder sb=new StringBuilder();
+				            StringBuilder sb=new StringBuilder();				            
 				            
-				            
-				            System.out.println("\n BareURL "+uriParedeRaw+"\n \n \n " );
 				            //Remove a uri do nome
 				            uriParede=(uriParedeRaw+"").replace("^^http://www.w3.org/2001/XMLSchema#anyURI","");
 				            uriParede=(uriParede+"").replace("eger","");
@@ -824,7 +1106,7 @@ INSERT DATA{
 				            	
 				            	
 				            }
-				            System.out.println("\n ProcessedURL "+NumUriParede+"\n \n \n " );
+				        
 				            int vi=Integer.parseInt(NumUriParede);
 				            
 				            
@@ -842,7 +1124,7 @@ INSERT DATA{
 										QueryExecution qe2 = conn2.query(query2);
 										
 										ResultSet rsService2 = qe2.execSelect();
-										 System.out.println("Lendo"+vi);
+									
 								        do {
 								            QuerySolution qs2 = rsService2.next();
 								            RDFNode coordTypeRaw = qs2.get("B");
@@ -870,8 +1152,7 @@ INSERT DATA{
 									            String keylimpa=(value+"").replace("^^http://www.w3.org/2001/XMLSchema#int","");
 								            	keylimpa=(keylimpa+"").replace("eger","");
 									            
-									            System.out.print(keylimpa); 	
-								            	
+									            
 									            resp[0][vi][cType]=Integer.parseInt(keylimpa);
 								            }
 								            
@@ -894,7 +1175,6 @@ INSERT DATA{
 			//Volta apenas o A em [0]
 			int count=0;
 			String string="SELECT DISTINCT ?A {"+one+" "+two+" "+ three+";}";
-			//String string="SELECT ?A ?C {?A <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:key> ?C}";
 			System.out.print("\n\nGeneric Search tp is:"+string);
 			Query query=QueryFactory.create(string);
 			
@@ -986,7 +1266,7 @@ INSERT DATA{
 		public String[][] genericSearchPoints(String one,String two, String three) {
 			int count=0;
 			String string="SELECT ?B ?C {"+one+" "+two+" "+ three+";}";
-			//String string="SELECT ?A ?C {?A <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:key> ?C}";
+
 			Query query=QueryFactory.create(string);
 			System.out.print("\n\nGeneric Search tp is:"+string);
 			
@@ -1037,9 +1317,6 @@ INSERT DATA{
 			
 	        do {
 	            QuerySolution qs = rsService.next();
-	            //org.apache.jena.rdf.model.Resource nome = qs.getResource("A");           
-	            //org.apache.jena.rdf.model.impl.LiteralImpl key= (LiteralImpl) qs.getLiteral("C");
-	        //  org.apache.jena.rdf.model.Resource type = qs.getResource("object");
 	            RDFNode nome = qs.get("A");
 	            RDFNode key = qs.get("C");
 	            //Remove a uri do nome
@@ -1062,41 +1339,7 @@ INSERT DATA{
 			}
 			return  (Object[]) resp.toArray();
 		}
-		
-		//Metodo de pegar infos do fuseki
-		public String getfuseki() {
-			StringBuilder resp=new StringBuilder();
-			String string="SELECT ?subject ?predicate ?object\n"
-					+"WHERE {\n"
-					+"?subject ?predicate ?object\n"
-					+"}\n"
-					+"LIMIT 25";
-		
-			Query query=QueryFactory.create(string);
-			
-			RDFConnectionRemoteBuilder builder = RDFConnectionFuseki.create().destination("http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning/sparql");
-			
 	
-			try(RDFConnectionFuseki conn = (RDFConnectionFuseki) builder.build()) {
-			QueryExecution qe = conn.query(query);
-			
-			ResultSet rsService = qe.execSelect();
-	
-	        do {
-	            QuerySolution qs = rsService.next();
-	            org.apache.jena.rdf.model.Resource hasProperty = qs.getResource("subject");
-	            org.apache.jena.rdf.model.Resource uri = qs.getResource("predicate");
-	        //    org.apache.jena.rdf.model.Resource type = qs.getResource("object");
-	
-	            resp.append(hasProperty+" "+uri+"\n");
-	            
-	        } while (rsService.hasNext());
-	        
-			}
-		return resp.toString();	
-		}
-		
-		/*proxima instrução*/
 }
 		
 
