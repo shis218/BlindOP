@@ -2,7 +2,11 @@ package com.example.HerokuBlind;
 
 import java.util.ArrayList;
 import java.util.List;
-
+/**
+ * Classe sobre vertices, no caso desse projeto foi usado para salvar pontos de interesse para se poder utilizar Dijkstra
+ * <br> seu uso comum é inicar o vertice com um nome e então usar a função addNeighbour passando uma edge já criada
+ * @author Artem Lovan 
+ */
 public class Vertex implements Comparable<Vertex> {
     private String name;
     private List<Edge> edges;

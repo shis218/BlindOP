@@ -1,5 +1,9 @@
 package com.example.HerokuBlind;
-
+/**
+ * classe modelo de pessoas, tendo getId, nome e chave. 
+ * @author Henrique
+ *
+ */
 public class Person {
 
 	  private String id;

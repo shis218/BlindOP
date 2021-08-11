@@ -1,5 +1,9 @@
 package com.example.HerokuBlind;
-
+/**
+ * Classe que guarda informação de arestas, tendo um vertice de inicio e um vertice alvo, alem de seu peso. 
+ * Seu uso principal é para computar o algoritmo Dijkstra e seu uso padrão é utilizando o construtor com as informações de peso, inicio, fim e então passando a classe para outros lugares.
+ * @author Artem Lovan 
+ */
 public class Edge {
     private double weight;
     private Vertex startVertex;

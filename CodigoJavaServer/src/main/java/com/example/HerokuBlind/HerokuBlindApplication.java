@@ -1,5 +1,7 @@
 package com.example.HerokuBlind;
-
+/**
+ * Classe de chamada do Spring, criada pelo projeto basico no Eclipse
+ */
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 

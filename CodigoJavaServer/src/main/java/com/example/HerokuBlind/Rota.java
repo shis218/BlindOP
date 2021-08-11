@@ -1,5 +1,9 @@
 package com.example.HerokuBlind;
-
+/**
+ * classe modelo que possui qual numero da sequencia é a instrução desta rota, assim como em que direção, quantos metros e quantos passos devem ser andandos
+ * @author Henrique
+ *
+ */
 public class Rota {
 	private String nome;
 	public String getNome() {

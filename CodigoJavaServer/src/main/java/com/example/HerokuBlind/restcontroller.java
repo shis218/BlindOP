@@ -60,7 +60,7 @@ public class restcontroller {
 		
 		
 		/**
-		 * Primeiro HTML de entrada, pode ser considerado como o indexhtml, tem função de direcionar para as outras paginas
+		 *  Primeiro HTML de entrada, pode ser considerado como o indexhtml, tem função de direcionar para as outras paginas
 		 * @return
 		 */
 		@GetMapping("/")
@@ -93,7 +93,7 @@ public class restcontroller {
 		}
 		
 		/**
-		 * devolve um JSON processado dos dados de login que estão no fuseki baseado no nome e key passados
+		 * Devolve um JSON processado dos dados de login que estão no fuseki baseado no nome e key passados
 		 * @param nome
 		 * @param key
 		 * @return classe Person
@@ -139,7 +139,12 @@ public class restcontroller {
 			}
 			//Se saiu do for, insere novo num
 			System.out.println("Tentando inserir: "+rA);
-			InsereNum(rA);
+	    	String string="PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n prefix owl: <http://www.w3.org/2002/07/owl#> \n"
+					+ "INSERT DATA{	\r\n"
+	                + "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#Usuario"+rA+"> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:key> "+rA+" \r\n"
+	                + "};";
+
+	    	this.InsertGenerico(string);
 			System.out.println("Inserido: "+rA);
 			pt= getChaves();
 		    return pt;
@@ -150,14 +155,14 @@ public class restcontroller {
 		
 		/**
 		 * Utiliza o metodo Dijkstra para verificar o menor caminho do Inicio e do Fim, então faz alguns tratamentos de string para buscar informações de cada nó e cada aresta de conexão entre os dois vertices definidos pelo caminho resultante do Dijkstra.
-		 * Foi utilizado uma estrategia de verificar se o retorno de GenericSearch era null, então pesquisando pelo nome de sujeito no Fuskei ao contrario
-		 * Caso não tenha uma remoção no meio do programa, é considerado que ao menos um desses dois ira ter retorno, já que eles foram utilizados no Dijkstra pra formular sua resposta.
-		 * Notas adicionais: 
-		 * rq2[0][0] se refere ao peso(distancia em metros) do unico elemento que deve ter sido retornado na pesquisa
-		 * numero de passos foi calculado como 1/3 dos metros
-		 * rq3[0][0] se refere a qual direção do unico elemento que deve ter sido retornado na pesquisa
-		 * Foi feito uma solução para que caso seja sempre feito da forma correta as inserções, quando se busca o generic search inverso, ele também inverta a direção que é adicionado na rota
-		 * exemplo: Considerando que a adição entrada-corredor é feita na direção Sul, então um caminho corredor->entrada é em direção norte 
+		 * <br> Foi utilizado uma estrategia de verificar se o retorno de GenericSearch era null, então pesquisando pelo nome de sujeito no Fuskei ao contrario
+		 * <br> Caso não tenha uma remoção no meio do programa, é considerado que ao menos um desses dois ira ter retorno, já que eles foram utilizados no Dijkstra pra formular sua resposta.
+		 * <br>Notas adicionais: 
+		 * <br>rq2[0][0] se refere ao peso(distancia em metros) do unico elemento que deve ter sido retornado na pesquisa
+		 * <br>numero de passos foi calculado como 1/3 dos metros
+		 * <br>rq3[0][0] se refere a qual direção do unico elemento que deve ter sido retornado na pesquisa
+		 * <br>Foi feito uma solução para que caso seja sempre feito da forma correta as inserções, quando se busca o generic search inverso, ele também inverta a direção que é adicionado na rota
+		 * <br>exemplo: Considerando que a adição entrada-corredor é feita na direção Sul, então um caminho corredor->entrada é em direção norte 
 		 * @param mapa [Nome do mapa, não utilizado]
 		 * @param vertIniName [Qual o inicio]
 		 * @param vertFimName [Qual o fim]
@@ -192,7 +197,7 @@ public class restcontroller {
 				}
 				rq2[0][0]=CleanXSD(rq2[0][0]);
 				r.setMetros(Float.parseFloat(rq2[0][0]));
-				r.setPassos((int)Float.parseFloat(rq2[0][0])/3);
+				r.setPassos((int)Float.parseFloat(rq2[0][0])*3);
 				String[][] rq3=this.genericSearch1("<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST"+nome1+""+nome2+">", "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#direct>", "?A");
 				if(rq3==null) {
 					inverte=true;
@@ -225,23 +230,23 @@ public class restcontroller {
 		}
 		
 		/**
-		 * Preparações:
-		 * >Chama o metodo getMapa para ter a matriz de paredes do mapa
-		 * >Chama o metodo getPontosDeInteresse para ter a matriz de pontos de interesse contendo [index][0] nome [index][1] coordenadaX [index][1] coordenadaY
-		 * >Chama o Dijkstra para entrada e saida apenas para produzir o grafo não direcionado sem pesos do mapa e salva na variavel md para uso futuro
-		 * >faz um replace em md para manter a usabilidade do Mermaid. (Talvez isso não seja necessario, fazer testes no futuro)
-		 * 
-		 * Execução da escrita da pagina:
-		 * >Utilizando um string builder, adiciona as tags basicas do HTML
-		 * >Cria um canvas
-		 * >Abre um JavaScript que trabalha com preencher esse canvas, o atributo lineWidth pode ser usado para alterar a grossura da linha e fillStyle a cor dos elementos escritos posteriormente.
-		 * >Faz um for percorrendo a matriz do mapa,  utiliza a combinação no canvas moveTo+lineTo passando um par ordenado de inicio e fim da linha, então utiliza o metodo Stroke() pra desenhar essa linha, esta foi a solução usada para desenhar o mapa em um canvas HTML
-		 * >Caso no get possua um rotaIni(pode ser feito no formulario no fim da pagina ou passado diretamente na url) executa o dijkstra e coloca uma linha pela rota
-		 * Foi utilizado a informações de pontos de interesses obtidas na preparação para pegar a coordenada de cada ponto de interesse e usar o combo moveTo e LineTo para criar as linhas
-		 * >Percorre a lista de pontos de interesse, colocando seus nomes no canvas. Obs: Por conta da solução encontrada para colocar nomes entre as ligações como "meio+numero", caso o ponto de interesse contenha a substring "meio", então ela não é exibida de forma escrita no mapa nem listada nos pontos de interesse do aplicativo. Mas ira aparecer no grafo
-		 * >Faz um script de chamada do Mermaid e coloca entre as divs "mermaid" o texto que produz o grafo. Este texto é gerado pelo metodo dijkstra.
-		 * >Faz um formulario para chamar rota para esta mesma pagina. 
-		 * >Finaliza as tags html e retorna a pagina.
+		 * <br>Preparações:
+		 * <br>>Chama o metodo getMapa para ter a matriz de paredes do mapa
+		 * <br>>Chama o metodo getPontosDeInteresse para ter a matriz de pontos de interesse contendo [index][0] nome [index][1] coordenadaX [index][1] coordenadaY
+		 * <br>>Chama o Dijkstra para entrada e saida apenas para produzir o grafo não direcionado sem pesos do mapa e salva na variavel md para uso futuro
+		 * <br>>faz um replace em md para manter a usabilidade do Mermaid. (Talvez isso não seja necessario, fazer testes no futuro)
+		 * <br>
+		 * <br>Execução da escrita da pagina:
+		 * <br>>Utilizando um string builder, adiciona as tags basicas do HTML
+		 * <br>>Cria um canvas
+		 * <br>>Abre um JavaScript que trabalha com preencher esse canvas, o atributo lineWidth pode ser usado para alterar a grossura da linha e fillStyle a cor dos elementos escritos posteriormente.
+		 * <br>>Faz um for percorrendo a matriz do mapa,  utiliza a combinação no canvas moveTo+lineTo passando um par ordenado de inicio e fim da linha, então utiliza o metodo Stroke() pra desenhar essa linha, esta foi a solução usada para desenhar o mapa em um canvas HTML
+		 * <br>>Caso no get possua um rotaIni(pode ser feito no formulario no fim da pagina ou passado diretamente na url) executa o dijkstra e coloca uma linha pela rota
+		 * <br>Foi utilizado a informações de pontos de interesses obtidas na preparação para pegar a coordenada de cada ponto de interesse e usar o combo moveTo e LineTo para criar as linhas
+		 * <br>>Percorre a lista de pontos de interesse, colocando seus nomes no canvas. Obs: Por conta da solução encontrada para colocar nomes entre as ligações como "meio+numero", caso o ponto de interesse contenha a substring "meio", então ela não é exibida de forma escrita no mapa nem listada nos pontos de interesse do aplicativo. Mas ira aparecer no grafo
+		 * <br>>Faz um script de chamada do Mermaid e coloca entre as divs "mermaid" o texto que produz o grafo. Este texto é gerado pelo metodo dijkstra.
+		 * <br>>Faz um formulario para chamar rota para esta mesma pagina. 
+		 * <br>>Finaliza as tags html e retorna a pagina.
 		 * @param nomemapa [Nao utilizado corretamente]
 		 * @param rotar [Caso tenha rota, Qual o inicio]
 		 * @param rotaro [Caso tenha rota, Qual o fim]
@@ -352,7 +357,7 @@ public class restcontroller {
 		
 		/**
 		 * Formulario para criação de mapa
-		 * Caso o valor não seja o default "Parede0", produz uma string de insert sparql com os valores de variavel nos parametros, então chama a função InsertGenerico que faz o update com essa string passada.
+		 * <br>Caso o valor não seja o default "Parede0", produz uma string de insert sparql com os valores de variavel nos parametros, então chama a função InsertGenerico que faz o update com essa string passada.
 		 * @param nomemapa
 		 * @param nomeParede
 		 * @param posXini
@@ -430,22 +435,22 @@ public class restcontroller {
 		}
 		
 		/**
-		 * metodo de Dijkstra, utiliza o criado pelo autor ArtLovan
-		 * Preparações:
-		 * >Chama o metodo getPontosDeInteresse para ter a matriz de pontos de interesse contendo [index][0] nome [index][1] coordenadaX [index][1] coordenadaY
-		 * >Coloca a string "graph TD\n" no grafo que sera passado globalmente para gerar scripts pro mermaid
-		 * >Cria uma hashtable que o par é de "nome do vertice" e "classe vertice" com o proposito de recuperar a classe de forma facil
-		 * >Cria um array apenas com os nomes, dessa forma sendo possivel iterar sobre eles, no futuro uma boa refatoração de codigo seja apenas usar os dados obtididos no getpontos de interesse, pois estao redundantes
-		 * 
-		 * Algoritmo:
-		 * Faz um FOR por todos pontos de interesse e cria uma instancia de classe vertice, preenchendo com nome, assim como colocando na hashtable e salvando o nome no vetor Nomes 
-		 * Faz um FOR pelos nomes, buscando todas as conexões para o ponto de interesse que contem o nome atual 
-		 * Percorre a lista de conexões, recupera o vertice que contem o nome dessa conexão, adiciona adjacencia com o vertice atual usando a informação de distancia
-		 * Também é escrito nas variaveis para o mermaid na forma "vertice1 --- vertice2\n" e  "vertice1 --- |distancia| vertice2\n", possui um IF extra para impedir que seja duplicado a inserção de vertice1-vertice2 e vertice2-vertice1		 *
-		 * >Roda o algoritmo de Dijkstra para esses vertices e arestas, com o parametro do vertice inicial vertIniName.
-		 * >Coloca o menor caminho em uma String txt que é dado como resposta
-		 * Adiciona informações da rota no String do Mermaid  mudando a cor das caixas
-		 * Coloca essas strings de Mermaid em variaveis globais
+		 * <br>metodo de Dijkstra, utiliza o criado pelo autor ArtLovan
+		 * <br>Preparações:
+		 * <br>>Chama o metodo getPontosDeInteresse para ter a matriz de pontos de interesse contendo [index][0] nome [index][1] coordenadaX [index][1] coordenadaY
+		 * <br>>Coloca a string "graph TD\n" no grafo que sera passado globalmente para gerar scripts pro mermaid
+		 * <br>>Cria uma hashtable que o par é de "nome do vertice" e "classe vertice" com o proposito de recuperar a classe de forma facil
+		 * <br>>Cria um array apenas com os nomes, dessa forma sendo possivel iterar sobre eles, no futuro uma boa refatoração de codigo seja apenas usar os dados obtididos no getpontos de interesse, pois estao redundantes
+		 * <br>
+		 * <br>Algoritmo:
+		 * <br>Faz um FOR por todos pontos de interesse e cria uma instancia de classe vertice, preenchendo com nome, assim como colocando na hashtable e salvando o nome no vetor Nomes 
+		 * <br>Faz um FOR pelos nomes, buscando todas as conexões para o ponto de interesse que contem o nome atual 
+		 * <br>Percorre a lista de conexões, recupera o vertice que contem o nome dessa conexão, adiciona adjacencia com o vertice atual usando a informação de distancia
+		 * <br>Também é escrito nas variaveis para o mermaid na forma "vertice1 --- vertice2\n" e  "vertice1 --- |distancia| vertice2\n", possui um IF extra para impedir que seja duplicado a inserção de vertice1-vertice2 e vertice2-vertice1		 *
+		 * <br>>Roda o algoritmo de Dijkstra para esses vertices e arestas, com o parametro do vertice inicial vertIniName.
+		 * <br>>Coloca o menor caminho em uma String txt que é dado como resposta
+		 * <br>Adiciona informações da rota no String do Mermaid  mudando a cor das caixas
+		 * <br>Coloca essas strings de Mermaid em variaveis globais
 		 * @param vertIniName Nome do ponto de interesse de Inicio
 		 * @param vertFimName Nome do ponto de interesse de Fim
 		 * @return String contendo um "array" de nomes dos pontos de interesse com o menor caminho entre inicio-fim
@@ -624,9 +629,9 @@ public class restcontroller {
 	}
 		
 		/**
-		 * Execução void que deleta paredes anteriores e adiciona novas paredes como um spam de inserts iguais ao /criamapa
-		 * Desta forma facilita a inserção em massa de dados ao fuseki
-		 * Uma melhor forma de que um metodo no futuro pegue essas coordenadas de algum arquivo
+		 * <br>Execução void que deleta paredes anteriores e adiciona novas paredes como um spam de inserts iguais ao /criamapa
+		 * <br>Desta forma facilita a inserção em massa de dados ao fuseki
+		 * <br>Uma melhor forma de que um metodo no futuro pegue essas coordenadas de algum arquivo
 		 */
 		@GetMapping("/EntopeMapa")
 		public void EntopeMapa() {
@@ -697,16 +702,15 @@ public class restcontroller {
 			return resp;
 		}
 		/**
-		 * Formulario para criação de ponto de interesse
-		 * Caso o valor não seja o default "CH0", produz uma string de insert sparql com os valores de variavel nos parametros, então chama a função InsertGenerico que faz o update com essa string passada.
-		 * As classes alvos dessa inserção são gml::Point e IndoorNavi::RoutenodeType
+		 * <br>Formulario para criação de ponto de interesse
+		 * <br>Caso o valor não seja o default "CH0", produz uma string de insert sparql com os valores de variavel nos parametros, então chama a função InsertGenerico que faz o update com essa string passada.
+		 * <br>As classes alvos dessa inserção são gml::Point e IndoorNavi::RoutenodeType
 		 * @param nomemapa
 		 * @param nomeInteresse
 		 * @param posXini
 		 * @param posYini
 		 * @return
-		 */
-		
+		 */		
 		@GetMapping("/criaPontosDeInteresse")
 		public String criaInteresse(@RequestParam(value = "lugar", defaultValue = "mapaEach") String nomemapa,@RequestParam(value = "nomeInteresse", defaultValue = "CH0") String nomeInteresse,  @RequestParam(value = "posXini", defaultValue = "0") String posXini,  @RequestParam(value = "posYini", defaultValue = "0") String posYini) {
 			StringBuilder sb=new StringBuilder();
@@ -748,10 +752,10 @@ public class restcontroller {
 		}
 		
 		/**
-		 * Formulario para criação de conexões de pontos de interesse
-		 * Os parametros são que um ponto se conecta com outro ponto e qual direção isso é feito
-		 * Caso o valor não seja o default "CH0", produz uma string de insert sparql com os valores de variavel nos parametros, então chama a função InsertGenerico que faz o update com essa string passada.
-		 * A classe alvo deste insert é IndoorNavi::RouteSegmentType. Foi adicionada o predicado direct aqui, deve ser tratado apropriadamente no futuro
+		 * <br>Formulario para criação de conexões de pontos de interesse
+		 * <br>Os parametros são que um ponto se conecta com outro ponto e qual direção isso é feito
+		 * <br>Caso o valor não seja o default "CH0", produz uma string de insert sparql com os valores de variavel nos parametros, então chama a função InsertGenerico que faz o update com essa string passada.
+		 * <br>A classe alvo deste insert é IndoorNavi::RouteSegmentType. Foi adicionada o predicado direct aqui, deve ser tratado apropriadamente no futuro
 		 * @param nomemapa
 		 * @param nomeInteresse
 		 * @param nomeConecta
@@ -827,6 +831,15 @@ public class restcontroller {
 		        }
 		
 	}
+		/**
+		 * Metodo antigo sem utilizar muito do poder possivel dos genericSearchs, necessita de refatoração futura
+		 * <br> Faz uma busca por todos que possuem gml:point, que são pontos de interesse da classe indoornavi:RouteNodeType
+		 * <br> Então cria uma matriz que recebe a resposta, e um segundo vetor que salvara as coordenadas das uris
+		 * <br> refaz a busca por gml:points, desta vez trabalhando em limpeza da uri e colocando num vetor para utilização futura para fazer uma segunda consulta
+		 * <br>  essa segunda consulta  busca com o metodo genericSearchPoints pela coordenada salva e dependendo do predicado ser gml:posX ou gml:posY, define em que posição no vetor de resposta deve ser dada, tentando sempre limpar com alguns padrões conhecidos a String de objeto antes de colocar no vetor
+		 * @return Matriz de pontos de interesses que possui seu [0]nome,[1]coordenada x,[2] coordenada y
+		 * @throws InterruptedException
+		 */
 		private String[][] getPontosDeInteresse() throws InterruptedException {
 			String[][] genSize=this.genericSearch1("?C", "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#gml:point>","?A");
 			String[][] resp=new String[genSize.length][3]; //String array[index] 0-: Nome 1:-Pos X, 2:Pos Y
@@ -939,7 +952,11 @@ public class restcontroller {
 		
 	
 
-		
+		/**
+		 * Passando uma uri e removendo seu XSD:anyURI do endereço e também adicionando < > para ser utilizado como uma URL para passar como parametro de sujeito
+		 * @param uri uri a ser convertida
+		 * @return URL 
+		 */
 		private String UriToURL(String uri) {
 			StringBuilder sb=new StringBuilder();
             //Remove a uri do nome
@@ -951,16 +968,28 @@ public class restcontroller {
 			return sb.toString();
 		}
 		
-		
-		private String CleanRST(String uri, String nomeConecta) {
+		/**
+		 * Remove a urlbase+{@link #CleanRST(String, String)do que for passado, além de tambem remover o nome de um ponto de conexão. 
+		 * <br> sua utilização parece mais util quando utilizada nas conexões de ponto de interesse, dessa forma encontrando qual é o nome da conexão apenas pela URL de sujeito
+		 * @param url url a ser limpa
+		 * @param nomeConecta nome de ponto de interesse que quer ser removido da URL
+		 * @return ponto de interesse
+		 */
+		private String CleanRST(String url, String nomeConecta) {
 			StringBuilder sb=new StringBuilder();
-            //Remove a uri do nome, RST e qualquer outro NomeConecta junto
-            uri=(uri+"").replace("<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST","");
-            //uri=(uri+"").replace("RST","");
-            uri=(uri+"").replace(">","");
-            uri=(uri+"").replace(nomeConecta,"");          
-			return uri;
+            //Remove a url do nome, RST e qualquer outro NomeConecta junto
+            url=(url+"").replace("<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST","");
+            //url=(url+"").replace("RST","");
+            url=(url+"").replace(">","");
+            url=(url+"").replace(nomeConecta,"");          
+			return url;
 		}
+		
+		/**
+		 * Remove XSD:int,XSD:String,XSD:double de um objeto
+		 * @param value valor a ser limpo
+		 * @return valor limpo
+		 */
 		private String CleanXSD(String value) {
 			//"<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST"+nomeInteresse+""+nomeConecta+">
             
@@ -971,7 +1000,15 @@ public class restcontroller {
         	keylimpa=(keylimpa+"").replace("e0","");
             return keylimpa;
 		}
-		
+		/**
+		 * Este metodo pode ser revisto no futuro e rerduzir o numero de buscas a serem utilizados
+		 * <br> Dado um ponto de interesse, faz uma busca por todos pontos de interesse que estão conectados a ele.
+		 * <br> faz uma busca por todos que possuem o ponto de interesse como objeto, ou seja, são IndoorNavi:RouteSegmentType
+		 * <br> então faz uma segunda busca pelas outras informações que estão em sua RST 
+		 * @param nomeInteresse nome do ponto de interesse que quer ver as suas outras conexões
+		 * @return Matriz de pontos de interesse com nome, peso, direção
+		 * @throws InterruptedException
+		 */
 		private String[][] getConexoesPontosDeInteresse(String nomeInteresse) throws InterruptedException {
 						
 				String[][] resultsQuery=this.genericSearch2("?A", "?B", "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#rdn"+nomeInteresse+">");
@@ -992,71 +1029,13 @@ public class restcontroller {
 				return resp;
 			}
 
-		
-		
-		private void InsereNum(int rA)
-		{
-			 RDFConnectionRemoteBuilder builder = RDFConnectionFuseki.create().destination("http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning/update");
-		        try(RDFConnectionFuseki conn = (RDFConnectionFuseki) builder.build()) {
-
-		        	//String do insert
-		        	String string="PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n prefix owl: <http://www.w3.org/2002/07/owl#> \n"
-		        					+ "INSERT DATA{	\r\n"
-		        	                + "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#Usuario"+rA+"> <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:key> "+rA+" \r\n"
-		        	                + "};";
-
-		            try{
-		                UpdateRequest updateDevice = UpdateFactory.create(string);
-		                conn.update(updateDevice);
-		            }catch(Exception e){
-		                System.out.println("Erro no insert");
-		            }
-
-		        }catch (Exception e) {
-		            System.out.println("Não foi possível instanciar conexão");
-		            e.printStackTrace();
-		            throw new RuntimeException();
-		        }
-		}
-		
-		
-		
-		public Rota[] getrota(String nomeMapa) {
-			Rota[] route=new Rota[200];
-			int[][] pontosDoGrafo=new int[50][2];
-			int count=0;
-			String string="SELECT ?A ?C {?A <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:coordenadaX> ?C}";
-			Query query=QueryFactory.create(string);
-			
-			RDFConnectionRemoteBuilder builder = RDFConnectionFuseki.create().destination("http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning/sparql");
-		
-			try(RDFConnectionFuseki conn = (RDFConnectionFuseki) builder.build()) {
-			QueryExecution qe = conn.query(query);
-			
-			ResultSet rsService = qe.execSelect();
-			
-	        do {
-	            QuerySolution qs = rsService.next();
-	           
-	            RDFNode key = qs.get("C");
-	            //Remove a uri do nome
-	           
-	            
-	            //Remove o XSD:INT do valor
-	            String keylimpa=(key+"").replace("^^http://www.w3.org/2001/XMLSchema#int","");
-	            
-	            keylimpa=(keylimpa+"").replace("eger","");
-	            pontosDoGrafo[count][0]=Integer.parseInt(keylimpa);
-	            count++;
-	            
-	        } while (rsService.hasNext());
-	        
-			}
-			
-			return route;
-		}
-		
-		
+		/**
+		 * Pode ser refeita ocm generic search no futuro
+		 * <br>Busca pelas paredes do mapa, fazendo limpezas necessarias na string e checando se possui a substring de parede
+		 * <br>após ter a lista de paredes,faz uma nova busca por essa URL de parede, e faz uma matriz de coordenadas xy baseada no  predicado idp:coordenada para detectar qual posição deve ser colocado 
+		 * @param nomeMapa
+		 * @return
+		 */
 		
 		public int[][][] getMapa(String nomeMapa) {
 			//Formato:
@@ -1170,6 +1149,27 @@ public class restcontroller {
 			
 			return resp;
 		}
+		/**
+		 * Faz uma select generica, de forma de compactar os resultados do select em uma matriz. Por conta de seu funcionamento só ter uma tripla obtida por linha, ela funciona como uma matriz Nx1
+		 * <br> Para seu parametro, deve se colocar em exatas uma das strings como "?A", pode ser usada com sparql genericos como "?B"... "?Z" mas não terao resultados devolvidos
+		 * <br> Este "?A" pode estar em qualquer um dos parametros, seja como sujeito,predicado, objeto. 
+		 * <br> Exemplo de uso: this.genericSearch1("<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST"+nome1+""+nome2+">", "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#weight>", "?A");
+		 * <br> Neste exemplo, ele busca por uma RST composta como sujeito, com o predicado definido "<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#weight>" e como a variavel alvo, o objeto "?A"
+		 * <br> Como resultado, ele recebera uma matriz 1x1 contendo o peso daquela RST
+		 * <br> 
+		 * <br> A elaboração deste codigo generico que faz uma Select utilizando a classe QueryExecution
+		 * <br> possui verificação adiciona se essa query tem algum resultado, coisa que não estava nos exemplos basicos da documentação do Jena
+		 * <br> Percorre o ResultSet que possui QuerySolutions que são percorridos pelo .next()
+		 * <br> O uso generico de RDFNode ao invez de outras classes como "org.apache.jena.rdf.model.Resource", então não ficando preso a formatos especificos que precisem de modelo e ter que serem tratados pra cada tipo de resultado, gerando codigos repetidos apenas para tratar cada tipo de resultado
+		 * <br> A compactação do resultado é dada ao receber um RDFNode da QuerySolution indexada por "A" que é por conta de ter passado "?A" pro SPARQl
+		 * <br> Ao transformar este RDFNode em uma String utilizando a tecnica de adicionar uma String vazia, então colocar esta String em um vetor e adicionar em uma arrayList, que permite ter tamanho dinamico
+		 * <br> Após percorrer todos resultados, repassa os valores da ArrayList pra uma matriz de tamanho Nx3, dessa forma mantem compatiblidade com a matriz resultante pela GenericSearch2 ou uma busca por todos sujeitos-predicados-objetos da base de dados 
+		 * @param one Um dos 3 valores a serem passados para fazer o select SPARQL
+		 * @param two Um dos 3 valores a serem passados para fazer o select SPARQL
+		 * @param three Um dos 3 valores a serem passados para fazer o select SPARQL
+		 * @return Uma matriz de String de tamanho Nx3(Com conteudo de tamanho Nx1), resultante do "SELECT ?A" feito no Fuseki. Caso o Select seja invalido, retorna 'null'. 
+		 */
+		
 		public String[][] genericSearch1(String one,String two, String three) {
 			
 			//Volta apenas o A em [0]
@@ -1201,7 +1201,7 @@ public class restcontroller {
 			
 	        do {
 	            QuerySolution qs = rsService.next();     
-	            RDFNode respA = qs.get("A");
+	            RDFNode respA = qs.get("A");	        
 	            String[] V= new String[3];
 	            V[0]=respA+"";
 	            count++;
@@ -1220,6 +1220,27 @@ public class restcontroller {
 			return moldResp;
 			
 		}
+		
+		/**
+		 * Faz uma select generica, de forma de compactar os resultados do select em uma matriz. Seu tamanho é de Nx2 
+		 * <br> Para seu parametro, deve se colocar em exatas uma das strings como "?A" e outra string como "?B", pode ser usada com sparql genericos como "?B"... "?Z" mas não terao resultados devolvidos
+		 * <br> Este "?A" e "?B" podem estar em qualquer um dos parametros, seja como sujeito,predicado, objeto. 
+		 * <br> Exemplo de uso: this.genericSearch1("<http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#RST"+nome1+""+nome2+">", "?B", "?A");
+		 * <br> Neste exemplo, ele busca por uma RST composta como sujeito, e devolvendo os predicados e objetos em "?B" e "?A"
+		 * <br> Como resultado, ele recebera uma matriz 1x4 contendo o peso,direção,conexões, geometria daquela RST
+		 * <br> A elaboração deste codigo generico que faz uma Select utilizando a classe QueryExecution
+		 * <br> possui verificação adiciona se essa query tem algum resultado, coisa que não estava nos exemplos basicos da documentação do Jena
+		 * <br> Percorre o ResultSet que possui QuerySolutions que são percorridos pelo .next()
+		 * <br> O uso generico de RDFNode ao invez de outras classes como "org.apache.jena.rdf.model.Resource", então não ficando preso a formatos especificos que precisem de modelo e ter que serem tratados pra cada tipo de resultado, gerando codigos repetidos apenas para tratar cada tipo de resultado
+		 * <br> A compactação do resultado é dada ao receber um RDFNode da QuerySolution indexada por "A" e "B" que é por conta de ter passado "?A" e "?B" pro SPARQl
+		 * <br> Ao transformar este RDFNode em uma String utilizando a tecnica de adicionar uma String vazia, então colocar esta String em um vetor e adicionar em uma arrayList, que permite ter tamanho dinamico
+		 * <br> Após percorrer todos resultados, repassa os valores da ArrayList pra uma matriz de tamanho Nx3, dessa forma mantem compatiblidade com a matriz resultante pela GenericSearch1 ou uma busca por todos sujeitos-predicados-objetos da base de dados 
+		 * @param one Um dos 3 valores a serem passados para fazer o select SPARQL
+		 * @param two Um dos 3 valores a serem passados para fazer o select SPARQL
+		 * @param three Um dos 3 valores a serem passados para fazer o select SPARQL
+		 * @return Uma matriz de String de tamanho Nx3(Com conteudo de tamanho Nx2), resultante do "SELECT ?A ?B" feito no Fuseki. Caso o Select seja invalido, retorna 'null'. 
+		 */
+		
 		public String[][] genericSearch2(String one,String two, String three) {
 			int count=0;
 			//Volta apenas o A e B em [0] e [1]
@@ -1263,6 +1284,15 @@ public class restcontroller {
 			return moldResp;
 			
 		}
+		
+		
+		/**
+		 * Codigo parecido com o GenericSearch2 tratado para o caso de verificar pontos de interesse, no futuro o codigo de uso deve ser adaptado para apenas utilizar o GenericSearch2
+		 * @param one
+		 * @param two
+		 * @param three
+		 * @return
+		 */
 		public String[][] genericSearchPoints(String one,String two, String three) {
 			int count=0;
 			String string="SELECT ?B ?C {"+one+" "+two+" "+ three+";}";
@@ -1301,7 +1331,10 @@ public class restcontroller {
 		}
 		
 		
-		
+		/**
+		 * Lista chaves buscando pelo predicado idp:key
+		 * @return lista de chaves
+		 */
 		public Object[] getChaves() {
 			int count=0;
 			String string="SELECT ?A ?C {?A <http://ip-50-62-81-50.ip.secureserver.net:8080/fuseki/indoorplaning#idp:key> ?C}";

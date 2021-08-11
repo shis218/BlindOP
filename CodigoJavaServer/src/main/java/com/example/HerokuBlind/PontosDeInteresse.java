@@ -1,4 +1,9 @@
 package com.example.HerokuBlind;
+/**
+ * Classe de Modelo para Pontos de Interesse, contendo seu nome, a coordenada X e a coordenada Y
+ * @author Henrique
+ *
+ */
 
 public class PontosDeInteresse {
 String nomeinteresse;

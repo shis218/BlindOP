@@ -1,5 +1,8 @@
 package com.example.HerokuBlind;
-
+/**
+ * Classe que computa Dijkstra a partir de uma lista de Vertices e Arestas
+ * @author Artem Lovan 
+ */
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
